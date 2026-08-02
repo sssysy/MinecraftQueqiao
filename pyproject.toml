@@ -1,0 +1,15 @@
+[project]
+name = "MinecraftQueqiao"
+version = "0.1.0"
+description = "我的世界鹊桥连接器"
+authors = [
+    {name = "sssysy", email = "sssysy@vip.qq.com"},
+]
+dependencies = []
+requires-python = ">=3.12"
+readme = "README.md"
+license = {file = "LICENSE"}
+
+
+[tool.pdm]
+distribution = false
