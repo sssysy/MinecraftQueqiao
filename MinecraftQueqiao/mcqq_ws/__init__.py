@@ -70,6 +70,10 @@ class QueqiaoWSClient:
     async def _run_client_loop(self) -> None:
         """正向 WS 连接循环，带自动重连。"""
         while self.should_reconnect:
+            logger.info(
+                f"[MCQueQiao] [{self.server_name}] "
+                f"正在尝试连接 WebSocket: {self.ws_url}"
+            )
             try:
                 async with websockets.connect(
                     self.ws_url,
