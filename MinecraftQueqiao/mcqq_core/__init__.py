@@ -3,10 +3,10 @@ from typing import Any
 from gsuid_core.logger import logger
 from gsuid_core.server import on_core_shutdown, on_core_start
 
-from mcqq_config import mcqq_config
-from mcqq_database import MCQQServer
-from mcqq_main import ws_event_handler
-from mcqq_ws import ws_manager
+from ..mcqq_config import mcqq_config
+from ..mcqq_database import MCQQServer
+from ..mcqq_main import ws_event_handler
+from ..mcqq_ws import ws_manager
 
 
 async def handle_ws_message(server_name: str, raw_message: str) -> None:

@@ -3,7 +3,7 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
-from mcqq_database import MCQQBind, MCQQServer
+from ..mcqq_database import MCQQBind, MCQQServer
 
 sv_mcqq_bind = SV("MC鹊桥绑定")
 

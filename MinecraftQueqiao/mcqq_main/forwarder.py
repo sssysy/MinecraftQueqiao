@@ -3,8 +3,8 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import Plugins, SV
 
-from mcqq_config import mcqq_config
-from mcqq_database import MCQQBind
+from ..mcqq_config import mcqq_config
+from ..mcqq_database import MCQQBind
 
 sv_mcqq_chat = SV("MC鹊桥聊天转发")
 
@@ -17,7 +17,7 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     转发到与该群关联的Minecraft服务器。
     """
     # 延迟导入，避免 mcqq_core <-> mcqq_main 循环导入
-    from mcqq_core import send_broadcast
+    from ..mcqq_core import send_broadcast
 
     if not mcqq_config.get_config("qq_to_mc_enabled").data:
         return

@@ -7,8 +7,8 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.segment import MessageSegment
 
-from mcqq_config import mcqq_config
-from mcqq_database import MCQQBind
+from ..mcqq_config import mcqq_config
+from ..mcqq_database import MCQQBind
 
 from . import forwarder
 
