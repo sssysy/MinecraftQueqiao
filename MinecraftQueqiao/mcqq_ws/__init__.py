@@ -7,10 +7,7 @@ from gsuid_core.logger import logger
 
 
 class QueqiaoWSClient:
-    """鹊桥 WebSocket 客户端，连接单个 MC 服务器。
-
-    仅支持正向 WS（作为 Client 连接鹊桥 Server）。
-    """
+    """鹊桥 WebSocket 客户端"""
 
     FATAL_CLOSE_CODES = {1008, 1003, 1010}
     FATAL_STATUS_CODES = {401, 403, 404}
@@ -92,7 +89,7 @@ class QueqiaoWSClient:
                     async for message in websocket:
                         if self.message_handler:
                             await self.message_handler(
-                                self.server_name, message
+                                self.server_name, message # type: ignore
                             )
 
             except (
@@ -199,7 +196,7 @@ class QueqiaoWSClient:
 
 
 class WSManager:
-    """多服务器 WebSocket 连接管理器（单例）。"""
+    """多服务器 WebSocket 连接管理器"""
 
     _instance: Optional["WSManager"] = None
 

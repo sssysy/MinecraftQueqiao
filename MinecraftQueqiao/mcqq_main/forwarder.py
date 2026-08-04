@@ -11,11 +11,7 @@ sv_mcqq_chat = SV("MC鹊桥聊天转发")
 
 @sv_mcqq_chat.on_message()
 async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
-    """QQ群消息转发到MC服务器。
-
-    当 qq_to_mc_enabled 开关开启时，将QQ群内的聊天消息
-    转发到与该群关联的Minecraft服务器。
-    """
+    """QQ群消息转发到MC服务器"""
     # 延迟导入，避免 mcqq_core <-> mcqq_main 循环导入
     from ..mcqq_core import send_broadcast
 
@@ -76,16 +72,7 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
 
 
 async def _get_group_name(group_id: str) -> str:
-    """从数据库查询群聊名称。
-
-    返回空字符串表示未找到或名称无效（默认值 "1"）。
-
-    Args:
-        group_id: 群聊 ID
-
-    Returns:
-        群聊名称，未找到时返回空字符串
-    """
+    """数据库查群聊名称。"""
     try:
         from gsuid_core.utils.database.models import CoreGroup
 

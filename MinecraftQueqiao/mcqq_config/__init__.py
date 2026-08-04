@@ -7,27 +7,28 @@ from gsuid_core.utils.plugins_config.models import (
     GSC,
     GsBoolConfig,
     GsIntConfig,
+    GsListStrConfig,
     GsStrConfig,
 )
 
 CONFIG_DEFAULT: Dict[str, GSC] = {
-    "subscribe_player_chat": GsBoolConfig(
-        "订阅-玩家聊天", "是否接收玩家聊天事件", True
-    ),
-    "subscribe_player_join": GsBoolConfig(
-        "订阅-玩家加入", "是否接收玩家加入事件", True
-    ),
-    "subscribe_player_quit": GsBoolConfig(
-        "订阅-玩家退出", "是否接收玩家退出事件", True
-    ),
-    "subscribe_player_death": GsBoolConfig(
-        "订阅-玩家死亡", "是否接收玩家死亡事件", True
-    ),
-    "subscribe_player_command": GsBoolConfig(
-        "订阅-玩家命令", "是否接收玩家命令事件", True
-    ),
-    "subscribe_player_achievement": GsBoolConfig(
-        "订阅-玩家成就", "是否接收玩家成就事件", True
+    "subscribe_events": GsListStrConfig(
+        "订阅事件",
+        "需要订阅的玩家事件，可多选",
+        [
+            "玩家聊天",
+            "玩家加入",
+            "玩家退出",
+            "玩家死亡",
+        ],
+        options=[
+            "玩家聊天",
+            "玩家加入",
+            "玩家退出",
+            "玩家死亡",
+            "玩家命令",
+            "玩家成就",
+        ],
     ),
     "reconnect_interval": GsIntConfig(
         "重连间隔(秒)", "WebSocket重连间隔秒数", 10
@@ -36,13 +37,13 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "最大重连次数", "0表示无限重连", 5
     ),
     "mc_to_qq_enabled": GsBoolConfig(
-        "MC→QQ 转发", "是否将MC服务器消息转发到QQ群", True
+        "消息转发出 MC", "把 MC 服务器消息转发到绑定的其他平台。需要开启玩家聊天订阅事件", True
     ),
     "qq_to_mc_enabled": GsBoolConfig(
-        "QQ→MC 转发", "是否将QQ群消息转发到MC服务器", True
+        "消息转发入 MC", "把绑定的其他平台消息转发到 MC 服务器", False
     ),
     "qq_to_mc_prefix": GsStrConfig(
-        "QQ→MC 触发前缀", "QQ消息转发到MC时的触发前缀，留空表示所有消息都转发", "#"
+        "转发到 MC 服务器的消息前缀", "触发转发到 MC 服务器需要的前缀，留空则全部转发", "mc说"
     ),
 }
 

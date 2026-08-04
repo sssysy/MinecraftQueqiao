@@ -5,9 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from gsuid_core.utils.database.base_models import BaseIDModel, with_session
 from gsuid_core.webconsole.mount_app import GsAdminModel, PageSchema, site
+from gsuid_core.utils.database.startup import exec_list
 
 T_MCQQServer = TypeVar("T_MCQQServer", bound="MCQQServer")
+T_MCQQBind = TypeVar("T_MCQQBind", bound="MCQQBind")
 
+exec_list.extend(
+    [
+        "ALTER TABLE MCQQServer ADD COLUMN show_server_name INTEGER DEFAULT 1",
+    ]
+)
 
 class MCQQServer(BaseIDModel, table=True):
     """鹊桥服务器配置表"""
@@ -23,6 +30,9 @@ class MCQQServer(BaseIDModel, table=True):
     access_token: str = Field(default="", title="访问令牌")
     queqiao_version: str = Field(default="v2", title="鹊桥版本(v1/v2)")
     enabled: bool = Field(default=True, title="是否启用")
+    show_server_name: bool = Field(
+        default=True, title="是否显示服务器名称"
+    )
 
     @classmethod
     @with_session
@@ -57,22 +67,8 @@ class MCQQServer(BaseIDModel, table=True):
         )
         return result.scalar_one_or_none()
 
-
-@site.register_admin
-class MCQQServerAdmin(GsAdminModel):
-    pk_name = "id"
-    page_schema = PageSchema(
-        label="鹊桥服务器管理",
-        icon="fa fa-server",
-    )  # type: ignore
-    model = MCQQServer
-
-
-T_MCQQBind = TypeVar("T_MCQQBind", bound="MCQQBind")
-
-
 class MCQQBind(BaseIDModel, table=True):
-    """服务器 <-> QQ群 绑定表"""
+    """群服绑定表"""
 
     __tablename__ = "MCQQBind"
     __table_args__: Dict[str, Any] = {"extend_existing": True}
@@ -117,7 +113,7 @@ class MCQQBind(BaseIDModel, table=True):
         server_name: str,
         group_id: str,
     ) -> Optional["MCQQBind"]:
-        """按服务器名称+群号查询绑定（用于幂等更新）"""
+        """按服务器名称+群号查询绑定"""
         result = await session.execute(
             select(cls).where(
                 cls.server_name == server_name,  # type: ignore
@@ -128,10 +124,19 @@ class MCQQBind(BaseIDModel, table=True):
 
 
 @site.register_admin
+class MCQQServerAdmin(GsAdminModel):
+    pk_name = "id"
+    page_schema = PageSchema(
+        label="鹊桥添加服务器",
+        icon="fa fa-server",
+    )  # type: ignore
+    model = MCQQServer
+
+@site.register_admin
 class MCQQBindAdmin(GsAdminModel):
     pk_name = "id"
     page_schema = PageSchema(
-        label="鹊桥群绑定管理",
+        label="鹊桥群群绑定",
         icon="fa fa-link",
     )  # type: ignore
     model = MCQQBind
