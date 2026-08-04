@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from sqlmodel import Field, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +35,17 @@ class MCQQServer(BaseIDModel, table=True):
             select(cls).where(cls.enabled == True)  # type: ignore
         )
         return list(result.scalars().all())
+
+    @classmethod
+    @with_session
+    async def get_by_name(
+        cls: Type[T_MCQQServer], session: AsyncSession, server_name: str
+    ) -> Optional["MCQQServer"]:
+        """按服务器名称查询配置"""
+        result = await session.execute(
+            select(cls).where(cls.server_name == server_name)  # type: ignore
+        )
+        return result.scalar_one_or_none()
 
 
 @site.register_admin

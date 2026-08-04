@@ -1,4 +1,3 @@
-import json
 from typing import Any
 
 from gsuid_core.logger import logger
@@ -6,47 +5,16 @@ from gsuid_core.server import on_core_shutdown, on_core_start
 
 from mcqq_config import mcqq_config
 from mcqq_database import MCQQServer
+from mcqq_main import ws_event_handler
 from mcqq_ws import ws_manager
 
 
 async def handle_ws_message(server_name: str, raw_message: str) -> None:
     """处理从鹊桥 WebSocket 接收到的消息。
 
-    目前仅通过 logger 打印消息内容，不实现业务逻辑。
-
-    Args:
-        server_name: 服务器名称
-        raw_message: 原始消息字符串
+    委托给 mcqq_main.ws_event_handler 进行事件分发。
     """
-    try:
-        data: dict[str, Any] = json.loads(raw_message)
-        post_type = data.get("post_type", "")
-
-        if post_type == "response":
-            # API 响应消息
-            logger.info(
-                f"[MCQueQiao] [{server_name}] 收到API响应: "
-                f"api={data.get('api')}, "
-                f"status={data.get('status')}, "
-                f"echo={data.get('echo')}"
-            )
-        else:
-            # 事件消息
-            event_name = data.get("event_name", "")
-            sub_type = data.get("sub_type", "")
-            logger.info(
-                f"[MCQueQiao] [{server_name}] 收到事件: "
-                f"type={post_type}, "
-                f"sub_type={sub_type}, "
-                f"event={event_name}"
-            )
-
-        logger.debug(f"[MCQueQiao] [{server_name}] 完整消息: {data}")
-
-    except json.JSONDecodeError:
-        logger.info(
-            f"[MCQueQiao] [{server_name}] 收到文本消息: {raw_message}"
-        )
+    await ws_event_handler(server_name, raw_message)
 
 
 @on_core_start

@@ -3,7 +3,12 @@ from typing import Dict
 
 from gsuid_core.data_store import get_res_path
 from gsuid_core.utils.plugins_config.gs_config import StringConfig
-from gsuid_core.utils.plugins_config.models import GSC, GsBoolConfig, GsIntConfig
+from gsuid_core.utils.plugins_config.models import (
+    GSC,
+    GsBoolConfig,
+    GsIntConfig,
+    GsStrConfig,
+)
 
 CONFIG_DEFAULT: Dict[str, GSC] = {
     "subscribe_player_chat": GsBoolConfig(
@@ -29,6 +34,15 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
     ),
     "max_reconnect_times": GsIntConfig(
         "最大重连次数", "0表示无限重连", 5
+    ),
+    "mc_to_qq_enabled": GsBoolConfig(
+        "MC→QQ 转发", "是否将MC服务器消息转发到QQ群", True
+    ),
+    "qq_to_mc_enabled": GsBoolConfig(
+        "QQ→MC 转发", "是否将QQ群消息转发到MC服务器", True
+    ),
+    "qq_to_mc_prefix": GsStrConfig(
+        "QQ→MC 触发前缀", "QQ消息转发到MC时的触发前缀，留空表示所有消息都转发", "#"
     ),
 }
 
