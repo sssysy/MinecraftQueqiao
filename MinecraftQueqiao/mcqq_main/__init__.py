@@ -8,7 +8,7 @@ from gsuid_core.models import Event
 from gsuid_core.segment import MessageSegment
 
 from mcqq_config import mcqq_config
-from mcqq_database import MCQQServer
+from mcqq_database import MCQQBind
 
 from . import forwarder
 
@@ -147,47 +147,61 @@ def format_event_message(data: dict[str, Any], sub_type: str) -> str | None:
 
 
 async def push_to_qq_group(server_name: str, text: str) -> None:
-    """将格式化后的消息推送到服务器关联的 QQ 群。
+    """将格式化后的消息推送到服务器绑定的 QQ 群。
 
-    遍历所有活跃 Bot，向服务器配置中关联的每个 QQ 群发送消息。
+    通过绑定表（MCQQBind）中记录的 ws_bot_id / bot_id / bot_self_id /
+    group_id 精确定位对应的活跃 Bot 与群，避免遍历所有 Bot 导致发往错误群。
 
     Args:
         server_name: 服务器名称
         text: 要发送的消息文本
     """
-    server = await MCQQServer.get_by_name(server_name)
-    if not server:
-        logger.warning(f"[MCQueQiao] 未找到服务器 '{server_name}' 的配置，无法推送消息")
-        return
-
-    if not server.group_ids:
-        logger.debug(f"[MCQueQiao] 服务器 '{server_name}' 未关联任何 QQ 群，跳过推送")
-        return
-
-    group_ids = [gid.strip() for gid in server.group_ids.split(",") if gid.strip()]
-    if not group_ids:
+    binds = await MCQQBind.get_by_server_name(server_name)
+    if not binds:
+        logger.debug(
+            f"[MCQueQiao] 服务器 '{server_name}' 未绑定任何 QQ 群，跳过推送"
+        )
         return
 
     if not gss.active_bot:
         logger.warning("[MCQueQiao] 没有活跃的 Bot 连接，无法推送消息")
         return
 
-    for gid in group_ids:
-        for bot_id, _bot in gss.active_bot.items():
-            try:
-                ev = Event(
-                    bot_id=bot_id,
-                    user_id="0",
-                    bot_self_id="",
-                    user_type="group",
-                    group_id=gid,
-                )
-                bot = Bot(_bot, ev)
-                await bot.send(MessageSegment.text(text))
-                logger.info(
-                    f"[MCQueQiao] [{server_name}] 已推送消息到群 {gid}: {text}"
-                )
-            except Exception as e:
-                logger.error(
-                    f"[MCQueQiao] [{server_name}] 推送消息到群 {gid} 失败: {e}"
-                )
+    for bind in binds:
+        await _send_to_bind(bind, text)
+
+
+async def _send_to_bind(bind: MCQQBind, text: str) -> None:
+    """按绑定行中的连接信息向指定群发送消息。
+
+    逻辑参考 gs_subscribe / Subscribe.send：使用 WS_BOT_ID 定位活跃 Bot。
+    """
+    ev = Event(
+        bot_id=bind.bot_id,
+        user_id="0",
+        bot_self_id=bind.bot_self_id,
+        user_type=bind.user_type or "group",  # type: ignore
+        group_id=bind.group_id,
+        msg_id=bind.msg_id or "",
+    )
+
+    if not bind.ws_bot_id or bind.ws_bot_id not in gss.active_bot:
+        logger.error(
+            f"[MCQueQiao] 机器人 {bind.ws_bot_id} 不存在，"
+            f"无法发送消息到群 {bind.group_id}"
+        )
+        return
+
+    BOT = gss.active_bot[bind.ws_bot_id]
+    bot = Bot(BOT, ev)
+    try:
+        await bot.send(MessageSegment.text(text))
+        logger.info(
+            f"[MCQueQiao] [{bind.server_name}] 已推送消息到群 "
+            f"{bind.group_id}: {text}"
+        )
+    except Exception as e:
+        logger.error(
+            f"[MCQueQiao] [{bind.server_name}] 推送消息到群 "
+            f"{bind.group_id} 失败: {e}"
+        )

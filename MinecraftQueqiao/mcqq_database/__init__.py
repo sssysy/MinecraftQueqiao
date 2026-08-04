@@ -23,7 +23,6 @@ class MCQQServer(BaseIDModel, table=True):
     access_token: str = Field(default="", title="访问令牌")
     queqiao_version: str = Field(default="v2", title="鹊桥版本(v1/v2)")
     enabled: bool = Field(default=True, title="是否启用")
-    group_ids: str = Field(default="", title="关联群号(逗号分隔)")
 
     @classmethod
     @with_session
@@ -47,6 +46,17 @@ class MCQQServer(BaseIDModel, table=True):
         )
         return result.scalar_one_or_none()
 
+    @classmethod
+    @with_session
+    async def get_by_id(
+        cls: Type[T_MCQQServer], session: AsyncSession, server_id: int
+    ) -> Optional["MCQQServer"]:
+        """按主键ID查询配置"""
+        result = await session.execute(
+            select(cls).where(cls.id == server_id)  # type: ignore
+        )
+        return result.scalar_one_or_none()
+
 
 @site.register_admin
 class MCQQServerAdmin(GsAdminModel):
@@ -56,3 +66,72 @@ class MCQQServerAdmin(GsAdminModel):
         icon="fa fa-server",
     )  # type: ignore
     model = MCQQServer
+
+
+T_MCQQBind = TypeVar("T_MCQQBind", bound="MCQQBind")
+
+
+class MCQQBind(BaseIDModel, table=True):
+    """服务器 <-> QQ群 绑定表"""
+
+    __tablename__ = "MCQQBind"
+    __table_args__: Dict[str, Any] = {"extend_existing": True}
+
+    server_id: int = Field(default=0, title="服务器ID")
+    server_name: str = Field(default="", title="服务器名称")
+    group_id: str = Field(default="", title="群号")
+    ws_bot_id: str = Field(default="", title="WS机器人ID")
+    bot_id: str = Field(default="", title="平台")
+    bot_self_id: str = Field(default="", title="机器人自身ID")
+    user_type: str = Field(default="group", title="发送类型")
+    msg_id: str = Field(default="", title="消息ID")
+    user_id: str = Field(default="", title="操作人")
+
+    @classmethod
+    @with_session
+    async def get_by_server_name(
+        cls: Type[T_MCQQBind], session: AsyncSession, server_name: str
+    ) -> List["MCQQBind"]:
+        """按服务器名称查询所有绑定"""
+        result = await session.execute(
+            select(cls).where(cls.server_name == server_name)  # type: ignore
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    @with_session
+    async def get_by_group_id(
+        cls: Type[T_MCQQBind], session: AsyncSession, group_id: str
+    ) -> List["MCQQBind"]:
+        """按群号查询所有绑定"""
+        result = await session.execute(
+            select(cls).where(cls.group_id == group_id)  # type: ignore
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    @with_session
+    async def get_by_server_group(
+        cls: Type[T_MCQQBind],
+        session: AsyncSession,
+        server_name: str,
+        group_id: str,
+    ) -> Optional["MCQQBind"]:
+        """按服务器名称+群号查询绑定（用于幂等更新）"""
+        result = await session.execute(
+            select(cls).where(
+                cls.server_name == server_name,  # type: ignore
+                cls.group_id == group_id,  # type: ignore
+            )
+        )
+        return result.scalar_one_or_none()
+
+
+@site.register_admin
+class MCQQBindAdmin(GsAdminModel):
+    pk_name = "id"
+    page_schema = PageSchema(
+        label="鹊桥群绑定管理",
+        icon="fa fa-link",
+    )  # type: ignore
+    model = MCQQBind

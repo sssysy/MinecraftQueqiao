@@ -4,7 +4,7 @@ from gsuid_core.models import Event
 from gsuid_core.sv import Plugins, SV
 
 from mcqq_config import mcqq_config
-from mcqq_database import MCQQServer
+from mcqq_database import MCQQBind
 
 sv_mcqq_chat = SV("MC鹊桥聊天转发")
 
@@ -40,17 +40,11 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
         if not raw_text:
             return
 
-    # 查询与当前群号关联的MC服务器
-    servers = await MCQQServer.get_all_enabled()
-    matched_servers = [
-        s for s in servers
-        if s.group_ids and ev.group_id in [
-            gid.strip() for gid in s.group_ids.split(",")
-        ]
-    ]
-    if not matched_servers:
+    # 查询与当前群号绑定的MC服务器
+    binds = await MCQQBind.get_by_group_id(ev.group_id)
+    if not binds:
         logger.debug(
-            f"[MCQueQiao] 群 {ev.group_id} 未关联任何MC服务器，跳过转发"
+            f"[MCQueQiao] 群 {ev.group_id} 未绑定任何MC服务器，跳过转发"
         )
         return
 
@@ -59,15 +53,15 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     group_id = ev.group_id
     formatted = f"[{group_id}] <{sender_nickname}> {raw_text}"
 
-    for server in matched_servers:
-        success = await send_broadcast(server.server_name, formatted)
+    for bind in binds:
+        success = await send_broadcast(bind.server_name, formatted)
         if success:
             logger.info(
                 f"[MCQueQiao] 已将QQ消息转发到服务器 "
-                f"'{server.server_name}': {formatted}"
+                f"'{bind.server_name}': {formatted}"
             )
         else:
             logger.error(
                 f"[MCQueQiao] 转发QQ消息到服务器 "
-                f"'{server.server_name}' 失败"
+                f"'{bind.server_name}' 失败"
             )
