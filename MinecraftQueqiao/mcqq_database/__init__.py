@@ -27,24 +27,25 @@ class MCQQServer(BaseIDModel, table=True):
     __tablename__ = "MCQQServer"
     __table_args__: Dict[str, Any] = {"extend_existing": True}
 
-    server_name: str = Field(default="", title="服务器名称")
+    enabled: bool = Field(default=True, title="是否启用")
     ws_url: str = Field(
         default="ws://127.0.0.1:8080/minecraft/ws",
         title="WebSocket地址",
     )
-    access_token: str = Field(default="", title="访问令牌")
-    queqiao_version: str = Field(default="v2", title="鹊桥版本(v1/v2)")
-    enabled: bool = Field(default=True, title="是否启用")
+    server_name: str = Field(default="Server", title="服务器名称")
+    access_token: str = Field(default="", title="access_token (选填)")
+    queqiao_version: str = Field(default="v2", title="鹊桥版本 (v1/v2)")
+    chatimage_enabled: bool = Field(
+        default=False, title="支持聊天框图片显示(ChatImage) MOD"
+    )
     show_server_name: bool = Field(
-        default=True, title="是否显示服务器名称"
+        default=True, title="MC -> 群聊 是否显示服务器名称"
     )
     rcon_enabled: bool = Field(default=False, title="是否开启 RCON")
     rcon_host: str = Field(default="", title="RCON 地址")
     rcon_port: int = Field(default=25575, title="RCON 端口")
     rcon_password: str = Field(default="", title="RCON 密码")
-    chatimage_enabled: bool = Field(
-        default=False, title="支持聊天框图片显示(ChatImage) MOD"
-    )
+
 
     @classmethod
     @with_session
@@ -139,7 +140,7 @@ class MCQQBind(BaseIDModel, table=True):
 class MCQQServerAdmin(GsAdminModel):
     pk_name = "id"
     page_schema = PageSchema(
-        label="鹊桥添加服务器",
+        label="绑定服务器",
         icon="fa fa-server",
     )  # type: ignore
     model = MCQQServer
@@ -148,7 +149,7 @@ class MCQQServerAdmin(GsAdminModel):
 class MCQQBindAdmin(GsAdminModel):
     pk_name = "id"
     page_schema = PageSchema(
-        label="鹊桥群群绑定",
+        label="群群绑定表",
         icon="fa fa-link",
     )  # type: ignore
     model = MCQQBind
