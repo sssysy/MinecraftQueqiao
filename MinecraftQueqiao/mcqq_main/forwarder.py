@@ -52,16 +52,14 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     sender_nickname = ev.sender.get("nickname", "") or ev.user_id
     group_id = ev.group_id
 
-    # 获取群名称（优先数据库，失败则回退到群号）
+    # 获取群名称（数据库查询，未找到则不显示群名前缀）
     group_name = await _get_group_name(group_id)
-    if not group_name:
-        group_name = group_id
 
     # 组装 Minecraft 文本组件：[群名称] 黄色，<用户名> 文本 白色
-    formatted: list[dict[str, str]] = [
-        {"text": f"[{group_name}] ", "color": "yellow"},
-        {"text": f"<{sender_nickname}> {raw_text}", "color": "white"},
-    ]
+    formatted: list[dict[str, str]] = []
+    if group_name:
+        formatted.append({"text": f"[{group_name}] ", "color": "yellow"})
+    formatted.append({"text": f"<{sender_nickname}> {raw_text}", "color": "white"})
 
     for bind in binds:
         success = await send_broadcast(bind.server_name, formatted)
