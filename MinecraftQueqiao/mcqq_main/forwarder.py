@@ -11,7 +11,7 @@ sv_mcqq_chat = SV("MC鹊桥聊天转发")
 
 @sv_mcqq_chat.on_message()
 async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
-    """QQ群消息转发到MC服务器"""
+    """群消息转发到MC服务器"""
     # 延迟导入，避免 mcqq_core <-> mcqq_main 循环导入
     from ..mcqq_core import send_broadcast
 
@@ -61,12 +61,12 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
         success = await send_broadcast(bind.server_name, formatted)
         if success:
             logger.info(
-                f"[MCQueQiao] 已将QQ消息转发到服务器 "
+                f"[MCQueQiao] 已将群消息转发到服务器 "
                 f"'{bind.server_name}': {formatted}"
             )
         else:
             logger.error(
-                f"[MCQueQiao] 转发QQ消息到服务器 "
+                f"[MCQueQiao] 转发群消息到服务器 "
                 f"'{bind.server_name}' 失败"
             )
 

@@ -60,6 +60,15 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
         f"text={text}"
     )
 
+    # 检查触发前缀，留空则全部转发
+    prefix = mcqq_config.get_config("mc_to_qq_prefix").data
+    if prefix and not text.startswith(prefix):
+        logger.debug(
+            f"[MCQueQiao] [{server_name}] 事件文本不以前缀 "
+            f"'{prefix}' 开头，跳过推送"
+        )
+        return
+
     await push_to_qq_group(server_name, text)
 
 
@@ -140,11 +149,11 @@ def format_event_message(
 
 
 async def push_to_qq_group(server_name: str, text: str) -> None:
-    """消息推送到服务器绑定的 QQ 群"""
+    """消息推送到服务器绑定的群"""
     binds = await MCQQBind.get_by_server_name(server_name)
     if not binds:
         logger.debug(
-            f"[MCQueQiao] 服务器 '{server_name}' 未绑定任何 QQ 群，跳过推送"
+            f"[MCQueQiao] 服务器 '{server_name}' 未绑定任何群组，跳过推送"
         )
         return
 
