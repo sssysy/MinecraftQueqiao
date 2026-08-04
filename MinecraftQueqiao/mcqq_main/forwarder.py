@@ -51,7 +51,17 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     # 获取发送者昵称
     sender_nickname = ev.sender.get("nickname", "") or ev.user_id
     group_id = ev.group_id
-    formatted = f"[{group_id}] <{sender_nickname}> {raw_text}"
+
+    # 获取群名称（优先数据库，失败则回退到群号）
+    group_name = await _get_group_name(group_id)
+    if not group_name:
+        group_name = group_id
+
+    # 组装 Minecraft 文本组件：[群名称] 黄色，<用户名> 文本 白色
+    formatted: list[dict[str, str]] = [
+        {"text": f"[{group_name}] ", "color": "yellow"},
+        {"text": f"<{sender_nickname}> {raw_text}", "color": "white"},
+    ]
 
     for bind in binds:
         success = await send_broadcast(bind.server_name, formatted)
@@ -65,3 +75,25 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
                 f"[MCQueQiao] 转发QQ消息到服务器 "
                 f"'{bind.server_name}' 失败"
             )
+
+
+async def _get_group_name(group_id: str) -> str:
+    """从数据库查询群聊名称。
+
+    返回空字符串表示未找到或名称无效（默认值 "1"）。
+
+    Args:
+        group_id: 群聊 ID
+
+    Returns:
+        群聊名称，未找到时返回空字符串
+    """
+    try:
+        from gsuid_core.utils.database.models import CoreGroup
+
+        group = await CoreGroup.base_select_data(group_id=group_id)
+        if group is not None and group.group_name and group.group_name != "1":
+            return str(group.group_name)
+    except Exception as e:
+        logger.debug(f"[MCQueQiao] 获取群名称失败: {e}")
+    return ""

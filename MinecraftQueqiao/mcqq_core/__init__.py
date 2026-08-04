@@ -57,7 +57,7 @@ async def shutdown_mcqq_connections() -> None:
 
 async def send_broadcast(
     server_name: str,
-    text: str,
+    text: str | list[dict[str, Any]],
     echo: str = "",
 ) -> bool:
     """向指定服务器发送广播消息。
@@ -68,7 +68,8 @@ async def send_broadcast(
 
     Args:
         server_name: 目标服务器名称
-        text: 要发送的文本内容
+        text: 要发送的文本内容。可以是纯字符串（v1），
+            也可以是 Minecraft 文本组件列表（v2，用于着色）
         echo: 回声标识，用于匹配响应（可选）
 
     Returns:
@@ -83,6 +84,8 @@ async def send_broadcast(
 
     if client.queqiao_version == "v1":
         # v1: 使用 send_msg API，接受简单字符串
+        if isinstance(text, list):
+            text = "".join(part.get("text", "") for part in text)
         message: dict[str, Any] = {
             "api": "send_msg",
             "data": {"message": text},
@@ -90,9 +93,10 @@ async def send_broadcast(
         }
     else:
         # v2: 使用 broadcast API，消息为 Minecraft 文本组件
+        components = text if isinstance(text, list) else [{"text": text}]
         message = {
             "api": "broadcast",
-            "data": {"message": [{"text": text}]},
+            "data": {"message": components},
             "echo": echo,
         }
 
