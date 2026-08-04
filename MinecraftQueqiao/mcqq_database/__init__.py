@@ -13,6 +13,10 @@ T_MCQQBind = TypeVar("T_MCQQBind", bound="MCQQBind")
 exec_list.extend(
     [
         "ALTER TABLE MCQQServer ADD COLUMN show_server_name INTEGER DEFAULT 1",
+        "ALTER TABLE MCQQServer ADD COLUMN rcon_enabled INTEGER DEFAULT 0",
+        "ALTER TABLE MCQQServer ADD COLUMN rcon_host TEXT DEFAULT ''",
+        "ALTER TABLE MCQQServer ADD COLUMN rcon_port INTEGER DEFAULT 25575",
+        "ALTER TABLE MCQQServer ADD COLUMN rcon_password TEXT DEFAULT ''",
     ]
 )
 
@@ -33,6 +37,10 @@ class MCQQServer(BaseIDModel, table=True):
     show_server_name: bool = Field(
         default=True, title="是否显示服务器名称"
     )
+    rcon_enabled: bool = Field(default=False, title="是否开启 RCON")
+    rcon_host: str = Field(default="", title="RCON 地址")
+    rcon_port: int = Field(default=25575, title="RCON 端口")
+    rcon_password: str = Field(default="", title="RCON 密码")
 
     @classmethod
     @with_session

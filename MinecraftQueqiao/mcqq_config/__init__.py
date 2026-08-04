@@ -42,7 +42,7 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "最大重连次数", "0表示无限重连", 5
     ),
     "qq_to_mc_prefix": GsStrConfig(
-        "转发到 MC 服务器的消息前缀", "触发转发到 MC 服务器需要的前缀，留空则全部转发", "mc说"
+        "转发到 MC 服务器的消息前缀", "触发转发到 MC 服务器需要的前缀，留空则全部转发", "mcqq"
     ),
     "mc_to_qq_prefix": GsStrConfig(
         "转发到群聊的消息前缀", "触发转发到群聊需要的前缀，留空则全部转发", ""
