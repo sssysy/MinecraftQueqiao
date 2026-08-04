@@ -17,6 +17,7 @@ exec_list.extend(
         "ALTER TABLE MCQQServer ADD COLUMN rcon_host TEXT DEFAULT ''",
         "ALTER TABLE MCQQServer ADD COLUMN rcon_port INTEGER DEFAULT 25575",
         "ALTER TABLE MCQQServer ADD COLUMN rcon_password TEXT DEFAULT ''",
+        "ALTER TABLE MCQQServer ADD COLUMN chatimage_enabled INTEGER DEFAULT 0",
     ]
 )
 
@@ -41,6 +42,9 @@ class MCQQServer(BaseIDModel, table=True):
     rcon_host: str = Field(default="", title="RCON 地址")
     rcon_port: int = Field(default=25575, title="RCON 端口")
     rcon_password: str = Field(default="", title="RCON 密码")
+    chatimage_enabled: bool = Field(
+        default=False, title="支持聊天框图片显示(ChatImage) MOD"
+    )
 
     @classmethod
     @with_session

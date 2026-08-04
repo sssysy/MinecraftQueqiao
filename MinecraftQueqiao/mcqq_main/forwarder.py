@@ -4,7 +4,7 @@ from gsuid_core.models import Event
 from gsuid_core.sv import Plugins, SV
 
 from ..mcqq_config import mcqq_config
-from ..mcqq_database import MCQQBind
+from ..mcqq_database import MCQQBind, MCQQServer
 
 sv_mcqq_chat = SV("MC鹊桥聊天转发")
 
@@ -51,13 +51,35 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     # 获取群名称（数据库查询，未找到则不显示群名前缀）
     group_name = await _get_group_name(group_id)
 
-    # 组装 Minecraft 文本组件：[群名称] 黄色，<用户名> 文本 白色
-    formatted: list[dict[str, str]] = []
-    if group_name:
-        formatted.append({"text": f"[{group_name}] ", "color": "yellow"})
-    formatted.append({"text": f"<{sender_nickname}> {raw_text}", "color": "white"})
+    # 收集消息中的图片 URL
+    image_urls: list[str] = [
+        img
+        for img in ev.image_list or ([ev.image] if ev.image else [])
+        if isinstance(img, str) and img.startswith(("http://", "https://"))
+    ]
 
     for bind in binds:
+        # 查询该服务器是否开启 ChatImage 图片显示
+        server = await MCQQServer.get_by_name(bind.server_name)
+        chatimage_enabled = bool(server and server.chatimage_enabled)
+
+        # 组装文本
+        formatted: list[dict[str, str]] = []
+        if group_name:
+            formatted.append({"text": f"[{group_name}] ", "color": "yellow"})
+        formatted.append(
+            {"text": f"<{sender_nickname}> {raw_text}", "color": "white"}
+        )
+
+        # 图片：开启 ChatImage 时发送 CICode，否则退化为 [图片] 文本
+        for url in image_urls:
+            if chatimage_enabled:
+                formatted.append(
+                    {"text": f"[[CICode,url={url},name=图片]]", "color": "white"}
+                )
+            else:
+                formatted.append({"text": "[图片]", "color": "white"})
+
         success = await send_broadcast(bind.server_name, formatted)
         if success:
             logger.info(

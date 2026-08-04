@@ -1,16 +1,35 @@
 import json
+import re
 from typing import Any
 
 from gsuid_core.bot import Bot
 from gsuid_core.gss import gss
 from gsuid_core.logger import logger
-from gsuid_core.models import Event
+from gsuid_core.models import Event, Message
 from gsuid_core.segment import MessageSegment
 
 from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQBind, MCQQServer
 
 from . import forwarder
+
+# [[CICode,url=...,name=...]] 聊天图片标记
+CICODE_RE = re.compile(r"\[\[CICode,([^\]]+)\]\]")
+
+
+def _parse_cicode(text: str) -> tuple[str, list[str]]:
+    """从文本中解析 ChatImage CICode，返回 (剩余文本, 图片URL列表)。"""
+    urls: list[str] = []
+
+    def _replace(match: re.Match) -> str:
+        for part in match.group(1).split(","):
+            if part.startswith("url="):
+                url = part[4:].strip()
+                if url.startswith(("http://", "https://")):
+                    urls.append(url)
+        return ""  # 从文本中移除 CICode
+
+    return CICODE_RE.sub(_replace, text), urls
 
 async def ws_event_handler(server_name: str, raw_message: str) -> None:
     """WS 消息事件分发入口"""
@@ -185,8 +204,19 @@ async def _send_to_bind(bind: MCQQBind, text: str) -> None:
 
     BOT = gss.active_bot[bind.ws_bot_id]
     bot = Bot(BOT, ev)
+
+    # 解析 CICode 图片，转为 QQ 图片段
+    clean_text, image_urls = _parse_cicode(text)
+    segments: list[Message] = []
+    if clean_text.strip():
+        segments.append(MessageSegment.text(clean_text))
+    for url in image_urls:
+        segments.append(MessageSegment.image(url))
+    if not segments:
+        segments.append(MessageSegment.text(text))
+
     try:
-        await bot.send(MessageSegment.text(text))
+        await bot.send(segments)
         logger.info(
             f"[MCQueQiao] [{bind.server_name}] 已推送消息到群 "
             f"{bind.group_id}: {text}"
