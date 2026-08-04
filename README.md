@@ -1,5 +1,10 @@
 # MinecraftQueqiao
 
+## 丨注意
+
+> [!CAUTION]
+> 插件当前处于开发中不可用状态，请勿安装。
+
 <p align="center">
   <a href="https://github.com/Genshin-bots/gsuid_core"><img src="//i.mcmod.cn/class/cover/20250211/1739280504_2_VMph.jpg" height="256" alt="MinecraftQueqiao"></a>
 </p>
