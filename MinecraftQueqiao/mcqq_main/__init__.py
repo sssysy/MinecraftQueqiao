@@ -82,14 +82,17 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
     )
 
     # 触发前缀仅对玩家聊天消息生效，留空则全部转发
+    # 前缀应匹配玩家实际聊天的内容，而非带服务器名前缀的格式化文本
     if sub_type in ("player_chat", "chat"):
         prefix = mcqq_config.get_config("mc_to_qq_prefix").data
-        if prefix and not text.startswith(prefix):
-            logger.debug(
-                f"[MCQueQiao] [{server_name}] 玩家聊天文本不以前缀 "
-                f"'{prefix}' 开头，跳过推送"
-            )
-            return
+        if prefix:
+            raw_message = str(data.get("message", ""))
+            if not raw_message.lstrip().startswith(prefix):
+                logger.debug(
+                    f"[MCQueQiao] [{server_name}] 玩家聊天内容不以前缀 "
+                    f"'{prefix}' 开头，跳过推送"
+                )
+                return
 
     await push_to_qq_group(server_name, text)
 
