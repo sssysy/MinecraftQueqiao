@@ -61,7 +61,7 @@ def _build_status_block(name: str, display_domain: str, data: dict) -> str:
     )
 
 
-@sv_mcqq_status.on_prefix("查看")
+@sv_mcqq_status.on_command("查看")
 async def status_command(bot: Bot, ev: Event) -> None:
     # 仅在群聊中执行
     if ev.user_type != "group" or not ev.group_id:
