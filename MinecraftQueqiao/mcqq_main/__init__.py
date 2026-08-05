@@ -136,7 +136,11 @@ def format_event_message(
     prefix = f"[{server_name}] " if show_server_name else ""
 
     if sub_type in ("player_chat", "chat"):
-        message = data.get("message", "")
+        message = str(data.get("message", ""))
+        # 去除触发前缀，只转发实际聊天内容
+        chat_prefix = mcqq_config.get_config("mc_to_qq_prefix").data
+        if chat_prefix and message.lstrip().startswith(chat_prefix):
+            message = message.lstrip()[len(chat_prefix):]
         return f"{prefix}<{player_name}> {message}"
 
     if sub_type in ("player_death", "death"):
