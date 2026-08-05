@@ -50,14 +50,14 @@ def _build_status_block(name: str, display_domain: str, data: dict) -> str:
         list_text = "无"
 
     return (
-        f"========服务器{name}状态========\n"
+        f"========服务器 {name} 状态========\n"
         f"服务器地址：{addr}\n"
         f"在线状态：{status_text}\n"
         f"游戏版本：{version}\n"
         f"服务器简介：{intro}\n"
         f"玩家数量：{count_text}\n"
         f"玩家列表：{list_text}\n"
-        f"==============================="
+        f"============================"
     )
 
 
