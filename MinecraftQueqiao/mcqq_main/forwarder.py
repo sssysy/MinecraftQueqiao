@@ -52,11 +52,7 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     group_name = await _get_group_name(group_id)
 
     # 收集消息中的图片 URL
-    image_urls: list[str] = [
-        img
-        for img in ev.image_list or ([ev.image] if ev.image else [])
-        if isinstance(img, str) and img.startswith(("http://", "https://"))
-    ]
+    image_urls: list[str] = ev.image_list
 
     for bind in binds:
         # 查询该服务器是否开启 ChatImage 图片显示
