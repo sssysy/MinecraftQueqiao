@@ -59,11 +59,13 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
 
     # 查询服务器配置，决定是否显示服务器名称前缀
     show_server_name = True
+    display_name = None
     server = await MCQQServer.get_by_name(server_name)
     if server is not None:
         show_server_name = server.show_server_name
+        display_name = server.display_name or server.server_name
 
-    text = format_event_message(data, sub_type, show_server_name)
+    text = format_event_message(data, sub_type, show_server_name, display_name)
     if text is None:
         # 未识别的事件类型或对应开关关闭
         logger.debug(
@@ -92,7 +94,10 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
 
 
 def format_event_message(
-    data: dict[str, Any], sub_type: str, show_server_name: bool = True
+    data: dict[str, Any],
+    sub_type: str,
+    show_server_name: bool = True,
+    display_name: str | None = None,
 ) -> str | None:
     """格式化消息文本。"""
     # 将 sub_type 映射到事件名（订阅列表中的取值）
@@ -119,7 +124,7 @@ def format_event_message(
         logger.debug(f"[MCQueQiao] 事件 {sub_type} 未在订阅列表中，跳过")
         return None
 
-    server_name = data.get("server_name", "Unknown")
+    server_name = display_name or data.get("server_name", "Unknown")
     player = data.get("player", {})
     player_name = player.get("nickname", "Unknown") if isinstance(player, dict) else "Unknown"
 

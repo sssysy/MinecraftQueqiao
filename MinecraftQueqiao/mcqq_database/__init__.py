@@ -18,6 +18,8 @@ exec_list.extend(
         "ALTER TABLE MCQQServer ADD COLUMN rcon_port INTEGER DEFAULT 25575",
         "ALTER TABLE MCQQServer ADD COLUMN rcon_password TEXT DEFAULT ''",
         "ALTER TABLE MCQQServer ADD COLUMN chatimage_enabled INTEGER DEFAULT 0",
+        "ALTER TABLE MCQQServer ADD COLUMN display_name TEXT DEFAULT ''",
+        "ALTER TABLE MCQQServer ADD COLUMN display_domain TEXT DEFAULT ''",
     ]
 )
 
@@ -32,7 +34,9 @@ class MCQQServer(BaseIDModel, table=True):
         default="ws://127.0.0.1:8080/minecraft/ws",
         title="WebSocket地址",
     )
-    server_name: str = Field(default="Server", title="服务器名称")
+    server_name: str = Field(default="Server", title="服务器内部名称")
+    display_name: str = Field(default="", title="服务器外显名称")
+    display_domain: str = Field(default="", title="服务器外显域名")
     access_token: str = Field(default="", title="access_token (选填)")
     queqiao_version: str = Field(default="v2", title="鹊桥版本 (v1/v2)")
     chatimage_enabled: bool = Field(
