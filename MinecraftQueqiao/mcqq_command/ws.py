@@ -11,7 +11,7 @@ from ..mcqq_ws import ws_manager
 sv_mcqq_refresh = SV("鹊桥ws相关指令")
 
 
-@sv_mcqq_refresh.on_prefix("刷新ws连接")
+@sv_mcqq_refresh.on_fullmatch("刷新ws连接")
 async def refresh_ws_connections(bot: Bot, ev: Event) -> None:
     logger.info(
         f"[MCQueQiao] 用户 {ev.user_id} 触发刷新 WS 连接列表"
