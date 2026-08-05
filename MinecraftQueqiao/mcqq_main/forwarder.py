@@ -24,16 +24,21 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
 
     # 获取原始文本内容
     raw_text = ev.raw_text.strip()
-    if not raw_text:
+
+    # 收集消息中的图片 URL
+    image_urls: list[str] = ev.image_list or ([ev.image] if ev.image else [])
+
+    # 纯图片消息（无文本但有图片）也允许转发
+    if not raw_text and not image_urls:
         return
 
-    # 检查触发前缀
+    # 检查触发前缀（仅对包含文本的消息生效）
     prefix = mcqq_config.get_config("qq_to_mc_prefix").data
     if prefix:
         if not raw_text.startswith(prefix):
             return
         raw_text = raw_text[len(prefix):].strip()
-        if not raw_text:
+        if not raw_text and not image_urls:
             return
 
     # 查询与当前群号绑定的MC服务器
@@ -50,9 +55,6 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
 
     # 获取群名称（数据库查询，未找到则不显示群名前缀）
     group_name = await _get_group_name(group_id)
-
-    # 收集消息中的图片 URL
-    image_urls: list[str] = ev.image_list
 
     for bind in binds:
         # 查询该服务器是否开启 ChatImage 图片显示
