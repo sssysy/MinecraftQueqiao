@@ -20,6 +20,7 @@ exec_list.extend(
         "ALTER TABLE MCQQServer ADD COLUMN chatimage_enabled INTEGER DEFAULT 0",
         "ALTER TABLE MCQQServer ADD COLUMN display_name TEXT DEFAULT ''",
         "ALTER TABLE MCQQServer ADD COLUMN display_domain TEXT DEFAULT ''",
+        "ALTER TABLE MCQQServer ADD COLUMN ws_mode TEXT DEFAULT 'client'",
     ]
 )
 
@@ -30,9 +31,10 @@ class MCQQServer(BaseIDModel, table=True):
     __table_args__: Dict[str, Any] = {"extend_existing": True}
 
     enabled: bool = Field(default=True, title="是否启用")
+    ws_mode: str = Field(default="client", title="WS模式 (client(正向)/server(反向))")
     ws_url: str = Field(
         default="ws://127.0.0.1:8080/minecraft/ws",
-        title="WebSocket地址",
+        title="正向 / 反向 WebSocket 地址",
     )
     server_name: str = Field(default="Server", title="服务器内部名称")
     display_name: str = Field(default="", title="服务器外显名称")
@@ -49,6 +51,8 @@ class MCQQServer(BaseIDModel, table=True):
     rcon_host: str = Field(default="", title="RCON 地址")
     rcon_port: int = Field(default=25575, title="RCON 端口")
     rcon_password: str = Field(default="", title="RCON 密码")
+
+
 
 
     @classmethod

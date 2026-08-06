@@ -14,7 +14,7 @@
 ## 丨注意
 
 > [!CAUTION]
-> 插件目前仅支持正向 Websocket 连接，请务必在服务端开放相应端口。
+> 反向 Websocket 早期测试！建议优先使用正向模式。
 
 ## 丨安装提醒
 
@@ -61,6 +61,9 @@
 > - `RCON 地址`: RCON 服务器地址
 > - `RCON 端口`: RCON 服务器端口
 > - `RCON 密码`: RCON 服务器密码
+> - `WS模式`: ws连接模式，可填入 `client` 或 `server`
+
+
 
 3. 重启 Gscore / 执行 `mc刷新ws连接` 命令
 

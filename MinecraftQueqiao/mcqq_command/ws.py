@@ -47,5 +47,8 @@ async def refresh_ws_connections(bot: Bot, ev: Event) -> None:
     )
 
     await bot.send(
-        f"WS 连接已刷新，已为 {len(servers)} 个服务器建立连接"
+        f"WS 连接已刷新：正向 "
+        f"{sum(1 for s in servers if s.ws_mode != 'server')} 个，"
+        f"反向 "
+        f"{sum(1 for s in servers if s.ws_mode == 'server')} 个"
     )

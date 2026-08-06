@@ -37,6 +37,14 @@ async def init_mcqq_connections() -> None:
         f"[MCQueQiao] 找到 {len(servers)} 个启用的服务器配置"
     )
 
+    # 统计双模式分布
+    client_count = sum(1 for s in servers if s.ws_mode != "server")
+    server_count = sum(1 for s in servers if s.ws_mode == "server")
+    logger.info(
+        f"[MCQueQiao] 模式分布: 正向 {client_count} 个, "
+        f"反向 {server_count} 个"
+    )
+
     await ws_manager.start_all(
         servers=servers,
         reconnect_interval=reconnect_interval,
