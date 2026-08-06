@@ -486,7 +486,7 @@ class QueqiaoWSClient:
                 await self.websocket.send(
                     json.dumps(message, ensure_ascii=False)
                 )
-            logger.info(
+            logger.debug(
                 f"[MCQueQiao] [{self.server_name}] "
                 f"已发送消息: {message.get('api', 'unknown')}"
             )

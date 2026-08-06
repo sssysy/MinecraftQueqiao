@@ -46,7 +46,7 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
 
     if post_type == "response":
         # API 响应消息，仅日志记录
-        logger.info(
+        logger.debug(
             f"[MCQueQiao] [{server_name}] 收到API响应: "
             f"api={data.get('api')}, "
             f"status={data.get('status')}, "
@@ -75,7 +75,7 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
         )
         return
 
-    logger.info(
+    logger.debug(
         f"[MCQueQiao] [{server_name}] 事件分发: "
         f"sub_type={sub_type}, "
         f"text={text}"

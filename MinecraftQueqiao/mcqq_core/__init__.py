@@ -91,7 +91,7 @@ async def send_broadcast(
             "echo": echo,
         }
 
-    logger.info(
+    logger.debug(
         f"[MCQueQiao] [{server_name}] 正在发送广播消息: {text}"
     )
     return await ws_manager.send_to_server(server_name, message)
