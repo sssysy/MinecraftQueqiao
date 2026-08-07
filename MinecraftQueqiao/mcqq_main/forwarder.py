@@ -85,7 +85,7 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     for s in segments:
         if s["kind"] == "at":
             name = await resolve_user_name(ev.bot_id, s["uid"], group_id)
-            s["text"] = f"{name}({s['uid']})" if name else f"({s['uid']})"
+            s["text"] = f"@{name}({s['uid']})" if name else f"(@{s['uid']})"
 
     for bind in binds:
         # 查询该服务器是否开启 ChatImage 图片显示
