@@ -34,9 +34,9 @@ def _get_lock(server_id: int) -> asyncio.Lock:
 def _validate_config(server: MCQQServer) -> None:
     """校验服务器 RCON 配置，不满足抛 RCONError。"""
     if not server.rcon_enabled:
-        raise RCONError(f"服务器「{server.server_name}」未开启 RCON")
+        raise RCONError(f"服务器 [{server.server_name}] 未开启 RCON")
     if not server.rcon_host or not server.rcon_password:
-        raise RCONError(f"服务器「{server.server_name}」RCON 配置不完整")
+        raise RCONError(f"服务器 [{server.server_name}] RCON 配置不完整")
 
 
 async def _connect(server: MCQQServer) -> aiomcrcon.Client:  # type: ignore
@@ -49,15 +49,15 @@ async def _connect(server: MCQQServer) -> aiomcrcon.Client:  # type: ignore
         await client.connect(timeout=CONNECT_TIMEOUT)
     except aiomcrcon.IncorrectPasswordError:
         raise RCONError(
-            f"服务器「{server.server_name}」RCON 认证失败，请检查密码"
+            f"服务器 [{server.server_name}] RCON 认证失败，请检查密码"
         )
     except aiomcrcon.RCONConnectionError as e:
         raise RCONError(
-            f"服务器「{server.server_name}」RCON 连接失败: {e}"
+            f"服务器 [{server.server_name}] RCON 连接失败: {e}"
         )
     except Exception as e:
         raise RCONError(
-            f"服务器「{server.server_name}」RCON 连接异常: {e}"
+            f"服务器 [{server.server_name}] RCON 连接异常: {e}"
         )
     return client
 
@@ -97,13 +97,13 @@ async def execute(server: MCQQServer, command: str) -> str:
     except aiomcrcon.ClientNotConnectedError:
         await _discard(server)
         raise RCONError(
-            f"服务器「{server.server_name}」RCON 连接已断开，"
+            f"服务器 [{server.server_name}] RCON 连接已断开，"
             f"请使用 mc刷新rcon连接 后重试"
         )
     except Exception as e:
         await _discard(server)
         raise RCONError(
-            f"服务器「{server.server_name}」RCON 执行指令失败: {e}"
+            f"服务器 [{server.server_name}] RCON 执行指令失败: {e}"
         )
 
     return strip_minecraft_formatting_codes(resp).strip()

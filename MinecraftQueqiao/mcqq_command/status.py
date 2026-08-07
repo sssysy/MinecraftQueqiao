@@ -101,7 +101,7 @@ async def status_command(bot: Bot, ev: Event) -> None:
         name = server.display_name or server.server_name
         display_domain = (server.display_domain or "").strip()
         if not display_domain:
-            results.append(f"「{name}」未配置服务器查询地址")
+            results.append(f" [{name}] 未配置服务器查询地址")
             continue
 
         url = STATUS_API.format(display_domain)
@@ -115,7 +115,7 @@ async def status_command(bot: Bot, ev: Event) -> None:
             logger.error(
                 f"[MCQueQiao] [{name}] 查询服务器状态失败: {e}"
             )
-            results.append(f"「{name}」查询失败，请稍后重试")
+            results.append(f" [{name}] 查询失败，请稍后重试")
 
     # 多服务器间用空行分隔
     await bot.send("\n\n".join(results))

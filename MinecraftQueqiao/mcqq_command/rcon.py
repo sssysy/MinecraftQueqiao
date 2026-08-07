@@ -66,7 +66,7 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
         try:
             out = await execute(server, command)
             results.append(
-                f"「{server.server_name}」: {out if out else '(无输出)'}"
+                f" [{server.server_name}] 执行命令成功:\n {out if out else '(无输出)'}"
             )
         except RCONError as e:
             logger.error(
@@ -77,7 +77,7 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
             logger.error(
                 f"[MCQueQiao] [{server.server_name}] RCON 未知错误: {e}"
             )
-            results.append(f"「{server.server_name}」执行指令失败，详见控制台")
+            results.append(f" [{server.server_name}] 执行指令失败，详见控制台")
 
     await bot.send("\n".join(results))
 
@@ -103,7 +103,7 @@ async def refresh_rcon_command(bot: Bot, ev: Event) -> None:
     for server in targets:
         try:
             await refresh(server)
-            results.append(f"「{server.server_name}」RCON 连接已刷新")
+            results.append(f" [{server.server_name}] RCON 连接已刷新")
         except RCONError as e:
             logger.error(
                 f"[MCQueQiao] [{server.server_name}] RCON 刷新失败: {e}"
@@ -113,6 +113,6 @@ async def refresh_rcon_command(bot: Bot, ev: Event) -> None:
             logger.error(
                 f"[MCQueQiao] [{server.server_name}] RCON 刷新未知错误: {e}"
             )
-            results.append(f"「{server.server_name}」刷新失败，详见控制台")
+            results.append(f" [{server.server_name}] 刷新失败，详见控制台")
 
     await bot.send("\n".join(results))
