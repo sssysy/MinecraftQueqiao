@@ -1,4 +1,5 @@
 import asyncio
+import struct
 
 import aiomcrcon
 
@@ -72,41 +73,66 @@ async def _discard(server: MCQQServer) -> None:
             pass
 
 
+def _is_stale_connection_error(e: Exception) -> bool:
+    """判断是否为连接失效类错误（连接被服务器关闭/断开）。"""
+    if isinstance(
+        e,
+        (
+            aiomcrcon.ClientNotConnectedError,
+            aiomcrcon.RCONConnectionError,
+            OSError,
+            asyncio.IncompleteReadError,
+            struct.error,
+        ),
+    ):
+        return True
+    return False
+
+
 async def execute(server: MCQQServer, command: str) -> str:
     """对指定服务器执行 RCON 指令，懒加载持久连接。
 
-    失败直接抛 RCONError，不自动重连；连接失效时自动移出池，
-    由用户通过 mc刷新rcon连接 手动重建。
+    连接失效（如服务器关闭了空闲连接）时自动丢弃并重建一次后重试，
+    仍失败则抛 RCONError。
     """
     if not command:
         raise RCONError("指令内容为空")
     if len(command) > MAX_CMD_LENGTH:
         raise RCONError(f"指令过长（超过 {MAX_CMD_LENGTH} 字符）")
 
-    # 懒加载 + 双重检查锁
-    client = _connections.get(server.id)
-    if client is None:
-        async with _get_lock(server.id):
-            client = _connections.get(server.id)
-            if client is None:
-                client = await _connect(server)
-                _connections[server.id] = client
+    # 连接失效时最多重建+重试一次；首次失败若为连接失效则重试，避免误伤真实指令错误
+    for attempt in range(2):
+        # 懒加载 + 双重检查锁
+        client = _connections.get(server.id)
+        if client is None:
+            async with _get_lock(server.id):
+                client = _connections.get(server.id)
+                if client is None:
+                    client = await _connect(server)
+                    _connections[server.id] = client
 
-    try:
-        resp, _ = await client.send_cmd(command, timeout=COMMAND_TIMEOUT)
-    except aiomcrcon.ClientNotConnectedError:
-        await _discard(server)
-        raise RCONError(
-            f"服务器 [{server.server_name}] RCON 连接已断开，"
-            f"请使用 mc刷新rcon连接 后重试"
-        )
-    except Exception as e:
-        await _discard(server)
-        raise RCONError(
-            f"服务器 [{server.server_name}] RCON 执行指令失败: {e}"
-        )
+        try:
+            resp, _ = await client.send_cmd(command, timeout=COMMAND_TIMEOUT)
+        except aiomcrcon.ClientNotConnectedError:
+            await _discard(server)
+            if attempt == 0:
+                continue
+            raise RCONError(
+                f"服务器 [{server.server_name}] RCON 连接已断开，"
+                f"请使用 mc刷新rcon连接 后重试"
+            )
+        except Exception as e:
+            await _discard(server)
+            if attempt == 0 and _is_stale_connection_error(e):
+                continue
+            raise RCONError(
+                f"服务器 [{server.server_name}] RCON 执行指令失败: {e}"
+            )
 
-    return strip_minecraft_formatting_codes(resp).strip()
+        return strip_minecraft_formatting_codes(resp).strip()
+
+    # 理论上不可达（循环最多 2 次，第二次必然 return 或 raise）
+    raise RCONError(f"服务器 [{server.server_name}] RCON 执行指令失败")
 
 
 async def refresh(server: MCQQServer) -> None:
