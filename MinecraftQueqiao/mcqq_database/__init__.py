@@ -36,8 +36,8 @@ class MCQQServer(BaseIDModel, table=True):
         default="ws://127.0.0.1:8080/minecraft/ws",
         title="正向 / 反向 WebSocket 地址",
     )
-    server_name: str = Field(default="Server", title="服务器内部名称")
-    display_name: str = Field(default="", title="服务器外显名称")
+    server_name: str = Field(default="Server", title="服务器内部名称 (不建议重复)")
+    display_name: str = Field(default="", title="服务器外显名称 (不建议重复)")
     display_domain: str = Field(default="", title="服务器外显域名")
     access_token: str = Field(default="", title="access_token (选填)")
     queqiao_version: str = Field(default="v2", title="鹊桥版本 (v1/v2)")
@@ -87,6 +87,19 @@ class MCQQServer(BaseIDModel, table=True):
             select(cls).where(cls.id == server_id)  # type: ignore
         )
         return result.scalar_one_or_none()
+
+    @classmethod
+    @with_session
+    async def get_by_display_name(
+        cls: Type[T_MCQQServer],
+        session: AsyncSession,
+        display_name: str,
+    ) -> List["MCQQServer"]:
+        """按外显名称查询所有配置（外显名允许重复）"""
+        result = await session.execute(
+            select(cls).where(cls.display_name == display_name)  # type: ignore
+        )
+        return list(result.scalars().all())
 
 class MCQQBind(BaseIDModel, table=True):
     """群服绑定表"""

@@ -3,7 +3,8 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
-from ..mcqq_database import MCQQBind, MCQQServer
+from ..mcqq_database import MCQQBind
+from ..utils.helpers.server_select import resolve_servers
 
 sv_mcqq_bind = SV("鹊桥群服相关指令")
 
@@ -12,19 +13,22 @@ sv_mcqq_bind = SV("鹊桥群服相关指令")
 async def bind_server(bot: Bot, ev: Event) -> None:
     # 仅在群聊中执行绑定
     if ev.user_type != "group" or not ev.group_id:
-        await bot.send("请在群聊中发送 mc群服绑定<服务器ID> 指令")
+        await bot.send(
+            "请在群聊中发送 mc群服绑定<服务器> 指令"
+        )
         return
 
-    server_id_text = ev.text.strip()
-    if not server_id_text.isdigit():
-        await bot.send("格式错误，请使用 mc群服绑定<服务器ID>，例如 mc群服绑定1")
+    servers, err = await resolve_servers(ev.text)
+    if err:
+        await bot.send(err)
         return
-
-    server_id = int(server_id_text)
-    server = await MCQQServer.get_by_id(server_id)
-    if not server:
-        await bot.send(f"未找到 ID 为 {server_id} 的服务器，请先在网页控制台确认服务器ID")
+    if servers is None or len(servers) != 1:
+        await bot.send(
+            "请指定一个服务器："
+            "mc群服绑定<服务器>，例如 mc群服绑定香草纪元"
+        )
         return
+    server = servers[0]
 
     # 写绑定数据库
     bind_data = {
@@ -74,15 +78,21 @@ async def unbind_server(bot: Bot, ev: Event) -> None:
         return
 
     server_id_text = ev.text.strip()
-    if not server_id_text.isdigit():
-        await bot.send("格式错误，请使用 mc群服解绑<服务器ID>，例如 mc群服解绑1")
+    if not server_id_text:
+        await bot.send("格式错误，请使用 mc群服解绑<服务器>，例如 mc群服解绑香草纪元")
         return
 
-    server_id = int(server_id_text)
-    server = await MCQQServer.get_by_id(server_id)
-    if not server:
-        await bot.send(f"未找到 ID 为 {server_id} 的服务器，请先在网页控制台确认服务器ID")
+    servers, err = await resolve_servers(server_id_text)
+    if err:
+        await bot.send(err)
         return
+    if servers is None or len(servers) != 1:
+        await bot.send(
+            "请指定一个服务器："
+            "mc群服解绑<服务器>，例如 mc群服解绑香草纪元"
+        )
+        return
+    server = servers[0]
 
     existing = await MCQQBind.get_by_server_group(
         server.server_name, ev.group_id

@@ -1,5 +1,4 @@
 import httpx
-from typing import Optional
 
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
@@ -7,6 +6,7 @@ from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
 from ..mcqq_database import MCQQBind, MCQQServer
+from ..utils.helpers.server_select import resolve_servers
 
 sv_mcqq_status = SV("鹊桥服务器状态指令")
 
@@ -50,14 +50,13 @@ def _build_status_block(name: str, display_domain: str, data: dict) -> str:
         list_text = "无"
 
     return (
-        f"========服务器 {name} 状态========\n"
+        f"[{name}] 服务器状态：\n"
         f"服务器地址：{addr}\n"
         f"在线状态：{status_text}\n"
         f"游戏版本：{version}\n"
         f"服务器简介：{intro}\n"
         f"玩家数量：{count_text}\n"
         f"玩家列表：{list_text}\n"
-        f"============================"
     )
 
 
@@ -65,19 +64,16 @@ def _build_status_block(name: str, display_domain: str, data: dict) -> str:
 async def status_command(bot: Bot, ev: Event) -> None:
     # 仅在群聊中执行
     if ev.user_type != "group" or not ev.group_id:
-        await bot.send("请在群聊中使用 mc查看 [服务器ID] 指令")
+        await bot.send("请在群聊中使用 mc查看 [服务器] 指令")
         return
 
     text = ev.text.strip()
 
-    # 解析可选的服务器ID：纯数字作为 ID 过滤，非数字提示用法，空则查询全部
-    server_id: Optional[int] = None
-    if text:
-        if text.isdigit():
-            server_id = int(text)
-        else:
-            await bot.send("用法：mc查看 或 mc查看 <服务器ID>，例如 mc查看 1")
-            return
+    # 解析可选的服务器选择：空则查询全部，否则按 ID/内部名/外显名筛选
+    servers, err = await resolve_servers(text)
+    if err:
+        await bot.send(err)
+        return
 
     # 查询群绑定的服务器
     binds = await MCQQBind.get_by_group_id(ev.group_id)
@@ -90,7 +86,7 @@ async def status_command(bot: Bot, ev: Event) -> None:
         server = await MCQQServer.get_by_name(bind.server_name)
         if server is None:
             continue
-        if server_id is not None and server.id != server_id:
+        if servers is not None and server.id not in {s.id for s in servers}:
             continue
         targets.append(server)
 
