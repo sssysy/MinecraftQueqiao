@@ -95,10 +95,9 @@ async def broadcast_command(bot: Bot, ev: Event) -> None:
             )
             return
         try:
-            out = await execute(server, command)
+            await execute(server, command)
             await bot.send(
-                f" [{server.server_name}] 广播成功:\n "
-                f"{out if out else '(无输出)'}"
+                f"广播成功！涉及的服务器：\n [{server.server_name}]"
             )
         except RCONError as e:
             logger.error(
@@ -123,26 +122,29 @@ async def broadcast_command(bot: Bot, ev: Event) -> None:
         return
 
     results = []
-    success = 0
+    good_servers = []
+    bad_servers = []
     for server in enabled:
         try:
-            out = await execute(server, command)
-            success += 1
-            results.append(
-                f" [{server.server_name}] 广播成功:\n "
-                f"{out if out else '(无输出)'}"
-            )
+            await execute(server, command)
+            good_servers.append(server.server_name)
         except RCONError as e:
             logger.error(
                 f"[MCQueQiao] [{server.server_name}] 广播失败: {e}"
             )
-            results.append(f" [{server.server_name}] 推送失败: {e}")
+            bad_servers.append(f" [{server.server_name}] 推送失败: {e}")
         except Exception as e:
             logger.error(
                 f"[MCQueQiao] [{server.server_name}] 广播未知错误: {e}"
             )
-            results.append(f" [{server.server_name}] 推送失败，详见控制台")
+            bad_servers.append(f" [{server.server_name}] 推送失败，详见控制台")
 
+    success = len(good_servers)
+    if success:
+        results.append(
+            "广播成功！涉及的服务器：\n " + ", ".join(good_servers)
+        )
+    results.extend(bad_servers)
     if skipped:
         results.append("部分服务器未开启rcon功能，无法推送")
 
