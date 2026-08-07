@@ -1,69 +1,128 @@
 import asyncio
-import struct
 
-RCON_TIMEOUT = 10
+import aiomcrcon
+
+from ..mcqq_database import MCQQServer
+from ..utils.utils.format_code import strip_minecraft_formatting_codes
+
+# 超时（秒）
+CONNECT_TIMEOUT: float = 5.0
+COMMAND_TIMEOUT: float = 10.0
+# aio-mc-rcon 的命令长度上限
+MAX_CMD_LENGTH: int = 1446
 
 
 class RCONError(Exception):
-    """RCON 协议错误"""
+    """RCON 操作错误：连接/认证/执行失败等，向调用方统一暴露。"""
 
 
-def _build_packet(request_id: int, ptype: int, payload: str) -> bytes:
-    """按协议打包：4字节长度 + 请求ID + 类型 + 负载 + 2个\\0。"""
-    body = (
-        struct.pack("<ii", request_id, ptype)
-        + payload.encode("utf-8")
-        + b"\x00\x00"
+# 以 server.id 为键的持久连接池
+_connections: dict[int, aiomcrcon.Client] = {}  # type: ignore
+# 以 server.id 为键的连接建立/释放锁
+_locks: dict[int, asyncio.Lock] = {}
+
+
+def _get_lock(server_id: int) -> asyncio.Lock:
+    """获取（惰性创建）指定服务器的连接锁。"""
+    lock = _locks.get(server_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _locks[server_id] = lock
+    return lock
+
+
+def _validate_config(server: MCQQServer) -> None:
+    """校验服务器 RCON 配置，不满足抛 RCONError。"""
+    if not server.rcon_enabled:
+        raise RCONError(f"服务器「{server.server_name}」未开启 RCON")
+    if not server.rcon_host or not server.rcon_password:
+        raise RCONError(f"服务器「{server.server_name}」RCON 配置不完整")
+
+
+async def _connect(server: MCQQServer) -> aiomcrcon.Client:  # type: ignore
+    """创建并连接一个 RCON 客户端。失败抛 RCONError，绝不返回未连接实例。"""
+    _validate_config(server)
+    client = aiomcrcon.Client(
+        server.rcon_host, server.rcon_port, server.rcon_password
     )
-    return struct.pack("<i", len(body)) + body
+    try:
+        await client.connect(timeout=CONNECT_TIMEOUT)
+    except aiomcrcon.IncorrectPasswordError:
+        raise RCONError(
+            f"服务器「{server.server_name}」RCON 认证失败，请检查密码"
+        )
+    except aiomcrcon.RCONConnectionError as e:
+        raise RCONError(
+            f"服务器「{server.server_name}」RCON 连接失败: {e}"
+        )
+    except Exception as e:
+        raise RCONError(
+            f"服务器「{server.server_name}」RCON 连接异常: {e}"
+        )
+    return client
 
 
-async def _read_packet(reader: asyncio.StreamReader):
-    """读取一个 RCON 数据包，返回 (request_id, ptype, payload)。"""
-    header = await reader.readexactly(4)
-    length = struct.unpack("<i", header)[0]
-    if length < 10 or length > 16384:
-        raise RCONError(f"无效的RCON数据包长度: {length}")
-    body = await reader.readexactly(length)
-    request_id, ptype = struct.unpack("<ii", body[:8])
-    payload = body[8:-2].decode("utf-8", errors="replace")
-    return request_id, ptype, payload
-
-
-async def rcon_run(
-    host: str,
-    port: int,
-    password: str,
-    command: str,
-    timeout: float = RCON_TIMEOUT,
-) -> str:
-    """连接 RCON 服务器，登录并执行指令，返回指令输出。"""
-
-    async def _run() -> str:
-        reader, writer = await asyncio.open_connection(host, port)
+async def _discard(server: MCQQServer) -> None:
+    """关闭并从池中移除指定服务器的连接（幂等，吞掉关闭异常）。"""
+    client = _connections.pop(server.id, None)
+    if client is not None:
         try:
-            # 登录：类型 3（AUTH），负载为密码
-            writer.write(_build_packet(1, 3, password))
-            await writer.drain()
-            req_id, _, _ = await _read_packet(reader)
-            if req_id == -1:
-                raise RCONError("RCON 认证失败，请检查密码")
+            await client.close()
+        except Exception:
+            pass
 
-            # 执行指令：类型 2（EXECCOMMAND）
-            writer.write(_build_packet(2, 2, command))
-            await writer.drain()
 
-            # 拼接类型 0（RESPONSE_VALUE）输出，遇到类型 2（结束包）停止
-            output = ""
-            while True:
-                req_id, ptype, payload = await _read_packet(reader)
-                if ptype == 0 and req_id == 2:
-                    output += payload
-                elif ptype == 2:
-                    break
-            return output
-        finally:
-            writer.close()
-            await writer.wait_closed()
+async def execute(server: MCQQServer, command: str) -> str:
+    """对指定服务器执行 RCON 指令，懒加载持久连接。
 
-    return await asyncio.wait_for(_run(), timeout)
+    失败直接抛 RCONError，不自动重连；连接失效时自动移出池，
+    由用户通过 mc刷新rcon连接 手动重建。
+    """
+    if not command:
+        raise RCONError("指令内容为空")
+    if len(command) > MAX_CMD_LENGTH:
+        raise RCONError(f"指令过长（超过 {MAX_CMD_LENGTH} 字符）")
+
+    # 懒加载 + 双重检查锁
+    client = _connections.get(server.id)
+    if client is None:
+        async with _get_lock(server.id):
+            client = _connections.get(server.id)
+            if client is None:
+                client = await _connect(server)
+                _connections[server.id] = client
+
+    try:
+        resp, _ = await client.send_cmd(command, timeout=COMMAND_TIMEOUT)
+    except aiomcrcon.ClientNotConnectedError:
+        await _discard(server)
+        raise RCONError(
+            f"服务器「{server.server_name}」RCON 连接已断开，"
+            f"请使用 mc刷新rcon连接 后重试"
+        )
+    except Exception as e:
+        await _discard(server)
+        raise RCONError(
+            f"服务器「{server.server_name}」RCON 执行指令失败: {e}"
+        )
+
+    return strip_minecraft_formatting_codes(resp).strip()
+
+
+async def refresh(server: MCQQServer) -> None:
+    """关闭并立即重建指定服务器的 RCON 连接。失败抛 RCONError。"""
+    async with _get_lock(server.id):
+        await _discard(server)
+        client = await _connect(server)
+        _connections[server.id] = client
+
+
+async def close_all() -> None:
+    """关闭所有持久连接（插件卸载/进程退出时调用）。"""
+    for sid in list(_connections.keys()):
+        client = _connections.pop(sid, None)
+        if client is not None:
+            try:
+                await client.close()
+            except Exception:
+                pass

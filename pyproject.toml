@@ -5,7 +5,7 @@ description = "我的世界鹊桥连接器"
 authors = [
     {name = "sssysy", email = "sssysy@vip.qq.com"},
 ]
-dependencies = []
+dependencies = ["aio-mc-rcon>=3.4.2"]
 requires-python = ">=3.12"
 readme = "README.md"
 license = {file = "LICENSE"}
