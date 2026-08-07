@@ -5,6 +5,8 @@ from gsuid_core.sv import Plugins, SV
 
 from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQBind, MCQQServer
+from ..utils.helpers.group_name import get_group_name
+from ..utils.helpers.user_name import resolve_user_name
 
 sv_mcqq_chat = SV("MC鹊桥聊天转发")
 
@@ -22,40 +24,47 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     if ev.user_type != "group" or not ev.group_id:
         return
 
-    # 获取原始文本内容
-    raw_text = ev.raw_text.strip()
+    # 按序解析 content 各消息片段，保留原始顺序，避免混发时丢段
+    segments: list[dict[str, str]] = []  # kind: text / at / file / image
+    has_at = False
+    for seg in ev.content:
+        mtype, data = seg.type, seg.data
+        if mtype == "text" and data:
+            segments.append({"kind": "text", "text": str(data)})
+        elif mtype == "at" and data:
+            has_at = True
+            segments.append({"kind": "at", "uid": str(data)})
+        elif mtype == "image" and data:
+            segments.append({"kind": "image", "url": str(data)})
+        elif mtype == "file" and data:
+            # data 形如 "文件名|url"
+            name, _, _ = str(data).partition("|")
+            segments.append({"kind": "file", "text": f"[文件 - {name.strip()}]"})
 
-    # 收集消息中的图片 URL
-    image_urls: list[str] = ev.image_list or ([ev.image] if ev.image else [])
-
-    # 收集被 @ 的目标（纯 at 消息无文本时据此转发）
-    at_targets: list[str] = ev.at_list or ([ev.at] if ev.at else [])
-
-    # 文件/视频消息（gscore 统一以 type='file' 接收，靠 file_name 识别）
-    file_name = ev.file_name
-
-    # 没有任何可转发内容（无文本、无图片、无 @、无文件）则跳过
-    if not raw_text and not image_urls and not at_targets and not file_name:
+    # 没有任何可转发内容（纯表情/纯语音等被忽略的片段不会进入 segments）则跳过
+    if not segments:
         return
 
-    # 纯 at 消息：无文本无图片无文件但存在 @ 目标，也允许转发，且不受前缀限制
-    is_pure_at = (
-        not raw_text and not image_urls and not file_name and bool(at_targets)
-    )
+    # 纯 at 消息：整条仅含 @ 目标，无法携带前缀，直接放行
+    is_pure_at = has_at and all(s["kind"] == "at" for s in segments)
 
-    # 检查触发前缀（仅对包含文本的消息生效；纯 at 消息无法带前缀，直接放行。
-    # 纯图片/纯文件消息无文本，若设置了前缀则与普通文本一样需带前缀才转发）
+    # 前缀检查（仅对含文本的消息生效；纯 at 消息免前缀）
     prefix = mcqq_config.get_config("qq_to_mc_prefix").data
     if prefix and not is_pure_at:
-        if not raw_text.startswith(prefix):
+        # 定位首个文本片段并去掉前缀
+        for i, s in enumerate(segments):
+            if s["kind"] == "text":
+                if not s["text"].startswith(prefix):
+                    return
+                s["text"] = s["text"][len(prefix):].lstrip()
+                if not s["text"]:
+                    del segments[i]
+                break
+        else:
+            # 无文本片段（纯图片/纯文件）且非纯 at：未带前缀则跳过
             return
-        raw_text = raw_text[len(prefix):].strip()
-        if not raw_text and not image_urls and not file_name:
+        if not segments:
             return
-
-    # 纯 at 消息将 @ 目标转为转发展示文本
-    if is_pure_at:
-        raw_text = " ".join(f"@{t}" for t in at_targets)
 
     # 查询与当前群号绑定的MC服务器
     binds = await MCQQBind.get_by_group_id(ev.group_id)
@@ -70,35 +79,39 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     group_id = ev.group_id
 
     # 获取群名称（数据库查询，未找到则不显示群名前缀）
-    group_name = await _get_group_name(group_id)
+    group_name = await get_group_name(group_id)
+
+    # 解析 @ 目标昵称（从 CoreUser 缓存查询，展示为 昵称(id)，查不到则退回 (id)）
+    for s in segments:
+        if s["kind"] == "at":
+            name = await resolve_user_name(ev.bot_id, s["uid"], group_id)
+            s["text"] = f"{name}({s['uid']})" if name else f"({s['uid']})"
 
     for bind in binds:
         # 查询该服务器是否开启 ChatImage 图片显示
         server = await MCQQServer.get_by_name(bind.server_name)
         chatimage_enabled = bool(server and server.chatimage_enabled)
 
-        # 组装文本
+        # 按序组装：群名 + <昵称> + 各片段（图片按 ChatImage 是否开启处理）
         formatted: list[dict[str, str]] = []
         if group_name:
             formatted.append({"text": f"[{group_name}] ", "color": "yellow"})
         formatted.append(
-            {"text": f"<{sender_nickname}> {raw_text}", "color": "white"}
+            {"text": f"<{sender_nickname}> ", "color": "white"}
         )
-
-        # 文件/视频消息：统一显示为 [文件 - 名称]，用户凭后缀自行识别类型
-        if file_name:
-            formatted.append(
-                {"text": f"[文件 - {file_name}]", "color": "white"}
-            )
-
-        # 图片：开启 ChatImage 时发送 CICode，否则退化为 [图片] 文本
-        for url in image_urls:
-            if chatimage_enabled:
-                formatted.append(
-                    {"text": f"[[CICode,url={url},name=图片]]", "color": "white"}
-                )
+        for s in segments:
+            if s["kind"] == "image":
+                if chatimage_enabled:
+                    formatted.append(
+                        {
+                            "text": f"[[CICode,url={s['url']},name=图片]]",
+                            "color": "white",
+                        }
+                    )
+                else:
+                    formatted.append({"text": "[图片]", "color": "white"})
             else:
-                formatted.append({"text": "[图片]", "color": "white"})
+                formatted.append({"text": s["text"], "color": "white"})
 
         success = await send_broadcast(bind.server_name, formatted)
         if success:
@@ -111,16 +124,3 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
                 f"[MCQueQiao] 转发群消息到服务器 "
                 f"'{bind.server_name}' 失败"
             )
-
-
-async def _get_group_name(group_id: str) -> str:
-    """数据库查群聊名称。"""
-    try:
-        from gsuid_core.utils.database.models import CoreGroup
-
-        group = await CoreGroup.base_select_data(group_id=group_id)
-        if group is not None and group.group_name and group.group_name != "1":
-            return str(group.group_name)
-    except Exception as e:
-        logger.debug(f"[MCQueQiao] 获取群名称失败: {e}")
-    return ""
