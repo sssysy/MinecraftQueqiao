@@ -67,17 +67,16 @@ async def broadcast_command(bot: Bot, ev: Event) -> None:
     else:
         servers = None
         parts = text.split(maxsplit=1)
-        resolved, err = await resolve_servers(parts[0])
-        if err:
-            await bot.send(err)
-            return
+        resolved, _ = await resolve_servers(parts[0])
         if resolved is not None:
+            # 首词命中服务器，余下内容作为正文
             servers = resolved
             content = parts[1].strip() if len(parts) > 1 else ""
             if not content:
                 await bot.send("广播内容为空，请提供要广播的文本")
                 return
         else:
+            # 首词不是任何服务器，将整个输入当作正文广播到全部绑定服务器
             content = text
         command = f"title @a title {_build_title_json(content)}"
 
