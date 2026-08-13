@@ -11,18 +11,13 @@
   <a href="https://github.com/Genshin-bots/gsuid_core" target="_blank">gsuid_core</a>
 </div>
 
-## 丨注意
-
-> [!CAUTION]
-> 反向 Websocket 早期测试！建议优先使用正向模式。
-
 ## 丨安装提醒
 
 > **注意：该插件为 [早柚核心(gsuid_core)](https://github.com/Genshin-bots/gsuid_core) 的扩展，具体安装方式可参考上方安装文档**
 >
 > **运行环境要求 Python `3.12+`**
 >
-> 🚧 项目快速迭代中 🚧
+> 🚧 项目快速迭代中，如有 BUG 欢迎 PR 🚧
 
 ## 丨绑定 / 使用教程
 #### 1. 前往 [Modrinth](https://modrinth.com/plugin/queqiao) 或 [CurseForge](https://www.curseforge.com/minecraft/mc-mods/queqiao) 下载并安装服务端对应的 `插件/Mod`。

@@ -1,4 +1,8 @@
-import httpx
+import re
+from typing import Any
+
+from mcstatus import JavaServer
+from mcstatus.motd import Motd
 
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
@@ -10,40 +14,52 @@ from ..utils.helpers.server_select import resolve_servers
 
 sv_mcqq_status = SV("鹊桥服务器状态指令")
 
-# mcsrvstat.us v3 接口，{ip} 支持 domain 或 domain:port
-STATUS_API = "https://api.mcsrvstat.us/3/{}"
+# 本地直连查询（Server List Ping 协议）超时时间（秒）
+STATUS_TIMEOUT = 10
 
 
-def _build_status_block(name: str, display_domain: str, data: dict) -> str:
-    """根据 API 返回数据组装单个服务器的状态文本块。"""
-    online: bool = bool(data.get("online", False))
+def _motd_to_plain(description: Any) -> str:
+    """将服务器返回的 MOTD（可能是纯文本或 JSON chat component）转为纯文本。"""
+    try:
+        return Motd.parse(description).to_plain().strip()
+    except Exception:
+        return str(description).strip()
 
-    # 服务器地址：优先用 API 返回的 hostname，缺失则回退配置的 display_domain
-    addr = data.get("hostname") or display_domain
+
+def _build_status_block(
+    name: str, display_domain: str, status_data: Any | None
+) -> str:
+    """根据本地直连查询结果组装单个服务器的状态文本块。"""
+    online = status_data is not None
+
+    # 服务器地址：本地直连无远端 hostname，直接使用配置的 display_domain
+    addr = display_domain
     status_text = "在线" if online else "离线"
 
-    # 游戏版本：优先 protocol.name，其次 version；离线时显示"未知"
+    # 游戏版本：status.version.name 去格式码；离线时显示"未知"
     if online:
-        protocol = data.get("protocol") or {}
-        version = protocol.get("name") or data.get("version") or "未知"
+        version = re.sub(
+            r"§[0-9a-fk-or]", "", status_data.version.name
+        ) or "未知"
     else:
         version = "未知"
 
-    # 服务器简介：motd.clean 用空格连接；离线或无内容时显示"无"
-    motd = data.get("motd") or {}
-    clean = motd.get("clean") or []
-    intro = " ".join(clean).strip() if online else "无"
-    if not intro:
+    # 服务器简介：MOTD 转纯文本；离线或无内容时显示"无"
+    if online:
+        intro = _motd_to_plain(status_data.description) or "无"
+    else:
         intro = "无"
 
     # 玩家数量与列表：离线时显示"- / -"与"无"
     if online:
-        players = data.get("players") or {}
-        online_n = players.get("online", 0)
-        max_n = players.get("max", 0)
+        online_n = status_data.players.online
+        max_n = status_data.players.max
         count_text = f"{online_n} / {max_n}"
-        player_list = players.get("list") or []
-        names = [p.get("name", "") for p in player_list if p.get("name")]
+        sample = status_data.players.sample or []
+        # 玩家名可能携带 § 格式码，清理后再展示
+        names = [
+            re.sub(r"§[0-9a-fk-or]", "", p.name) for p in sample if p.name
+        ]
         list_text = ", ".join(names) if names else "无"
     else:
         count_text = "- / -"
@@ -104,13 +120,17 @@ async def status_command(bot: Bot, ev: Event) -> None:
             results.append(f" [{name}] 未配置服务器查询地址")
             continue
 
-        url = STATUS_API.format(display_domain)
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(url)
-                resp.raise_for_status()
-                data: dict = resp.json()
-            results.append(_build_status_block(name, display_domain, data))
+            server_obj = await JavaServer.async_lookup(
+                display_domain, timeout=STATUS_TIMEOUT
+            )
+            status_data = await server_obj.async_status()
+            results.append(
+                _build_status_block(name, display_domain, status_data)
+            )
+        except (OSError, TimeoutError) as e:
+            logger.error(f"[MCQueQiao] [{name}] 直连服务器失败: {e}")
+            results.append(f" [{name}] 服务器离线或无法直连")
         except Exception as e:
             logger.error(
                 f"[MCQueQiao] [{name}] 查询服务器状态失败: {e}"
