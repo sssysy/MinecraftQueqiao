@@ -70,7 +70,7 @@ async def bind_server(bot: Bot, ev: Event) -> None:
     )
 
 
-@sv_mcqq_bind.on_prefix("mc群服解绑")
+@sv_mcqq_bind.on_prefix("群服解绑")
 async def unbind_server(bot: Bot, ev: Event) -> None:
     # 仅在群聊中执行解绑
     if ev.user_type != "group" or not ev.group_id:
