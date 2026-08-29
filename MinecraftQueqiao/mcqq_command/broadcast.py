@@ -124,10 +124,8 @@ async def chat_broadcast_command(bot: Bot, ev: Event) -> None:
         await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
         return
 
-    sender_name = ev.sender.get("nickname") or ev.user_id
     formatted_msg = [
         {"text": "[公告] ", "color": "gold", "bold": True},
-        {"text": f"<{sender_name}> ", "color": "yellow"},
         {"text": content, "color": "white"},
     ]
 
