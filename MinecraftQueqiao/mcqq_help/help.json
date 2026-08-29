@@ -21,28 +21,28 @@
     ]
   },
   "服务器管理": {
-    "desc": "广播与RCON远程指令",
+    "desc": "广播、公告与WS控制台指令",
     "data": [
       {
         "name": "广播",
-        "desc": "向MC服务器发送标题广播",
+        "desc": "向MC服务器发送屏幕大标题(Title)",
         "eg": "广播 欢迎来到服务器",
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
       },
       {
-        "name": "RCON指令",
-        "desc": "远程执行MC服务器指令",
-        "eg": "rcon say hello",
+        "name": "公告",
+        "desc": "向MC服务器聊天栏发布广播文字",
+        "eg": "公告 今晚20点举行活动",
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
       },
       {
-        "name": "刷新RCON连接",
-        "desc": "刷新RCON连接状态",
-        "eg": "刷新rcon连接",
+        "name": "RCON指令",
+        "desc": "通过WebSocket执行控制台指令",
+        "eg": "rcon say hello",
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
@@ -50,20 +50,20 @@
     ]
   },
   "状态与连接": {
-    "desc": "服务器状态查询与WebSocket管理",
+    "desc": "服务器状态与WebSocket连接管理",
     "data": [
       {
         "name": "查看服务器",
-        "desc": "查询MC服务器在线状态与玩家列表",
+        "desc": "查询当前群绑定的MC服务器状态",
         "eg": "查看",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
       },
       {
-        "name": "刷新WS连接",
-        "desc": "刷新WebSocket连接",
-        "eg": "刷新ws连接",
+        "name": "连接状态",
+        "desc": "查看所有MC服务器的反向WS连接状态",
+        "eg": "连接状态",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false

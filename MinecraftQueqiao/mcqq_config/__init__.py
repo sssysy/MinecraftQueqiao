@@ -12,11 +12,10 @@ from gsuid_core.utils.plugins_config.models import (
 )
 
 CONFIG_DEFAULT: Dict[str, GSC] = {
-    "mc_to_qq_enabled": GsBoolConfig(
-        "接收 MC 事件", "把 MC 服务器事件转发到绑定的其他平台。需要开启对应订阅事件", True
-    ),
-    "qq_to_mc_enabled": GsBoolConfig(
-        "发送消息到 MC", "把绑定的其他平台消息转发到 MC 服务器", False
+    "show_server_name": GsBoolConfig(
+        "群聊显示服务器外显名",
+        "把 MC 服务器消息转发到群聊时，是否在消息前显示服务器名",
+        True,
     ),
     "subscribe_events": GsListStrConfig(
         "订阅事件",
@@ -35,17 +34,17 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
             "玩家成就",
         ],
     ),
-    "reconnect_interval": GsIntConfig(
-        "重连间隔(秒)", "WebSocket重连间隔秒数", 10
+    "rcon_timeout": GsIntConfig(
+        "RCON 超时时间(秒)", "通过 WebSocket 执行 RCON 命令的等待超时秒数", 8
     ),
-    "max_reconnect_times": GsIntConfig(
-        "最大重连次数", "0表示无限重连", 5
+    "qq_to_mc_enabled": GsBoolConfig(
+        "群聊消息转发", "群聊消息转发到 MC 开关", False
     ),
     "qq_to_mc_prefix": GsStrConfig(
-        "转发到 MC 服务器的消息前缀", "触发转发到 MC 服务器需要的前缀，留空则全部转发", "mcqq"
+        "群聊 -> MC 消息前缀", "触发转发到 MC 服务器需要的前缀，留空则全部转发", "mcqq"
     ),
     "mc_to_qq_prefix": GsStrConfig(
-        "转发到群聊的消息前缀", "触发转发到群聊需要的前缀，留空则全部转发", ""
+        "MC -> 群聊 消息前缀", "触发转发到群聊需要的前缀，留空则全部转发", ""
     ),
 }
 

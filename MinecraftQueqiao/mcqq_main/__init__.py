@@ -16,9 +16,6 @@ from . import forwarder
 
 async def ws_event_handler(server_name: str, raw_message: str) -> None:
     """WS 消息事件分发入口"""
-    if not mcqq_config.get_config("mc_to_qq_enabled").data:
-        return
-
     try:
         data: dict[str, Any] = json.loads(raw_message)
     except json.JSONDecodeError:
@@ -40,13 +37,13 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
     # 事件消息（message / notice）
     sub_type = data.get("sub_type", "")
 
-    # 查询服务器配置，决定是否显示服务器名称前缀
-    show_server_name = True
+    # 查询服务器配置（外显名）与全局前缀开关
     display_name = None
     server = await MCQQServer.get_by_name(server_name)
     if server is not None:
-        show_server_name = server.show_server_name
         display_name = server.display_name or server.server_name
+
+    show_server_name: bool = mcqq_config.get_config("show_server_name").data
 
     text = format_event_message(data, sub_type, show_server_name, display_name)
     if text is None:
