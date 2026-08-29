@@ -67,6 +67,14 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
+      },
+      {
+        "name": "删除旧表",
+        "desc": "清理重构前旧数据表并提示重启",
+        "eg": "删除旧表",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
       }
     ]
   }
