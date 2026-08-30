@@ -77,8 +77,8 @@ websocket_client:
 1. 访问 Gscore `网页控制台 -> 数据库管理 -> MinecraftQueqiao -> 定时公告 -> 新增`
 2. 填入公告相关信息：
    - `是否启用`: 是否开启该定时公告
-   - `ServerName`: 目标服务器名称（需与绑定的服务器 ServerName 一致）
-   - `公告内容`: 推送到 Minecraft 聊天栏的公告文本
+   - `ServerName`: 目标服务器名称（需与绑定的服务器 ServerName 一致；留空则全服广播）
+   - `公告内容`: 推送到 Minecraft 聊天栏的公告文本（支持文本和Minecraft Raw JSON）
    - `推送时间/间隔(cron或时间戳)`:
      - **Cron 循环推送**：可通过网站换算
      - **Unix 时间戳定时推送**：可通过网站换算

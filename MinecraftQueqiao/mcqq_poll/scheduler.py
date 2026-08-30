@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 from zoneinfo import ZoneInfo
@@ -9,7 +10,8 @@ from gsuid_core.aps import scheduler
 from gsuid_core.logger import logger
 
 from ..mcqq_core import send_broadcast
-from ..mcqq_database import MCQQPoll
+from ..mcqq_database import MCQQPoll, MCQQServer
+from ..mcqq_ws import ws_manager
 
 TZ_SHANGHAI = ZoneInfo("Asia/Shanghai")
 
@@ -76,25 +78,61 @@ def parse_schedule_rule(rule_str: str) -> Tuple[str, Optional[Any], str]:
 
 
 async def send_poll_message(poll_id: int, server_name: str, content: str) -> bool:
-    """向指定服务器发送定时公告消息"""
-    formatted_msg = [
-        {"text": "[定时公告] ", "color": "gold", "bold": True},
-        {"text": content, "color": "white"},
-    ]
+    """向指定服务器（或全部服务器）发送定时公告消息，支持富文本 JSON 格式"""
+    # 尝试解析 JSON 格式的花样文本 (Minecraft Raw JSON Text)
     try:
-        ok = await send_broadcast(server_name, formatted_msg)
-        if ok:
-            logger.info(
-                f"[MCQueQiao] 定时公告 [ID:{poll_id}] 成功推送至服务器 [{server_name}]"
-            )
+        parsed = json.loads(content)
+        if isinstance(parsed, list):
+            formatted_msg = parsed
+        elif isinstance(parsed, dict):
+            formatted_msg = [parsed]
         else:
-            logger.warning(
-                f"[MCQueQiao] 定时公告 [ID:{poll_id}] 推送至服务器 [{server_name}] 失败（服务器未连接或离线）"
-            )
-        return ok
-    except Exception as e:
-        logger.error(f"[MCQueQiao] 定时公告 [ID:{poll_id}] 推送异常: {e}")
+            formatted_msg = [
+                {"text": "[定时公告] ", "color": "gold", "bold": True},
+                {"text": str(parsed), "color": "white"},
+            ]
+    except Exception:
+        # 普通纯文本格式
+        formatted_msg = [
+            {"text": "[定时公告] ", "color": "gold", "bold": True},
+            {"text": content, "color": "white"},
+        ]
+
+    # 确定目标服务器列表（留空或 all 则发送给全部已启用/已连接服务器）
+    target_servers: List[str] = []
+    if not server_name or server_name in ("all", "全部"):
+        servers = await MCQQServer.get_all_enabled()
+        if servers:
+            target_servers = [s.server_name for s in servers]
+        else:
+            target_servers = ws_manager.get_connected_servers()
+    else:
+        target_servers = [server_name]
+
+    if not target_servers:
+        logger.warning(f"[MCQueQiao] 定时公告 [ID:{poll_id}] 未找到可推送的目标服务器")
         return False
+
+    success = True
+    for s_name in target_servers:
+        try:
+            ok = await send_broadcast(s_name, formatted_msg)
+            if ok:
+                logger.info(
+                    f"[MCQueQiao] 定时公告 [ID:{poll_id}] 成功推送至服务器 [{s_name}]"
+                )
+            else:
+                logger.warning(
+                    f"[MCQueQiao] 定时公告 [ID:{poll_id}] 推送至服务器 [{s_name}] 失败（服务器未连接或离线）"
+                )
+                success = False
+        except Exception as e:
+            logger.error(
+                f"[MCQueQiao] 定时公告 [ID:{poll_id}] 推送至 [{s_name}] 异常: {e}"
+            )
+            success = False
+
+    return success
 
 
 async def refresh_poll_jobs() -> Tuple[int, int, List[Dict[str, Any]]]:
