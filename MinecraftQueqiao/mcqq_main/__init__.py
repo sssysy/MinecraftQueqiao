@@ -9,7 +9,11 @@ from gsuid_core.segment import MessageSegment
 
 from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQBind, MCQQServer
-from ..utils.helpers.prefix_match import is_blacklisted, match_and_trim_prefix
+from ..utils.helpers.prefix_match import (
+    is_blacklisted,
+    is_fake_player,
+    match_and_trim_prefix,
+)
 from ..utils.utils.cicode import parse_cicode
 
 from . import forwarder
@@ -34,6 +38,23 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
             f"echo={data.get('echo')}"
         )
         return
+
+    # 假人过滤：检查事件触发者是否命中假人过滤名单
+    player = data.get("player", {})
+    player_name = (
+        player.get("nickname", "") if isinstance(player, dict) else ""
+    )
+    if not player_name:
+        player_name = str(data.get("player_name", data.get("nickname", "")))
+
+    if player_name:
+        fake_filter = mcqq_config.get_config("fake_player_filter").data
+        if is_fake_player(str(player_name), fake_filter):
+            logger.debug(
+                f"[MCQueQiao] [{server_name}] 玩家 '{player_name}' "
+                f"命中假人过滤规则，跳过事件分发"
+            )
+            return
 
     # 事件消息（message / notice）
     sub_type = data.get("sub_type", "")

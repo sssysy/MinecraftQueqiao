@@ -60,6 +60,11 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "屏蔽转发到群聊的前缀或正则表达式列表。白名单为空时生效。详情参考 README",
         [],
     ),
+    "fake_player_filter": GsListStrConfig(
+        "假人过滤列表",
+        "过滤假人/Bot的玩家名或正则表达式列表（以 r: 开头）。匹配到的玩家事件将不会转发到群聊。详情参考 README",
+        [],
+    ),
 }
 
 CONFIG_PATH = get_res_path() / "MinecraftQueqiao" / "config.json"

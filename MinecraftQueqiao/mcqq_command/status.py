@@ -7,7 +7,9 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
+from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQBind, MCQQServer
+from ..utils.helpers.prefix_match import is_fake_player
 from ..utils.helpers.server_select import resolve_servers
 
 try:
@@ -73,10 +75,13 @@ async def get_server_status_text(server: MCQQServer) -> str:
         online_cnt = status.players.online
         max_cnt = status.players.max
 
-        # 从协议原生 players.sample 提取在线玩家列表
+        # 从协议原生 players.sample 提取在线玩家列表并过滤假人
         if status.players.sample:
+            fake_filter = mcqq_config.get_config("fake_player_filter").data
             player_names = [
-                p.name for p in status.players.sample if p and p.name
+                p.name
+                for p in status.players.sample
+                if p and p.name and not is_fake_player(p.name, fake_filter)
             ]
             player_list_str = ", ".join(player_names) if player_names else "无"
         elif online_cnt == 0:
