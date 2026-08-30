@@ -16,6 +16,7 @@ exec_list.extend(
     [
         "ALTER TABLE MCQQServer ADD COLUMN chatimage_enabled INTEGER DEFAULT 0",
         "ALTER TABLE MCQQServer ADD COLUMN display_name TEXT DEFAULT ''",
+        "ALTER TABLE MCQQServer ADD COLUMN server_address TEXT DEFAULT ''",
     ]
 )
 
@@ -34,6 +35,10 @@ class MCQQServer(BaseIDModel, table=True):
     display_name: str = Field(
         default="",
         title="服务器外显名",
+    )
+    server_address: str = Field(
+        default="",
+        title="服务器地址(IP/域名)",
     )
     access_token: str = Field(
         default="",

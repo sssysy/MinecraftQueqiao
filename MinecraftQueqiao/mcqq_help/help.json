@@ -120,8 +120,8 @@
     "data": [
       {
         "name": "查看服务器",
-        "desc": "查询当前群绑定的MC服务器状态",
-        "eg": "查看",
+        "desc": "查看服务器的详细配置与运行信息",
+        "eg": "查看 / 查看 [服务器]",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
