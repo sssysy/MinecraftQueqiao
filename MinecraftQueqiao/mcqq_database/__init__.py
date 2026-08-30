@@ -9,6 +9,7 @@ from gsuid_core.utils.database.startup import exec_list
 
 T_MCQQServer = TypeVar("T_MCQQServer", bound="MCQQServer")
 T_MCQQBind = TypeVar("T_MCQQBind", bound="MCQQBind")
+T_MCQQRconWhitelist = TypeVar("T_MCQQRconWhitelist", bound="MCQQRconWhitelist")
 
 exec_list.extend(
     [
@@ -145,6 +146,86 @@ class MCQQBind(BaseIDModel, table=True):
         return result.scalar_one_or_none()
 
 
+class MCQQRconWhitelist(BaseIDModel, table=True):
+    """RCON 白名单表"""
+
+    __tablename__ = "MCQQRconWhitelist"
+    __table_args__: Dict[str, Any] = {"extend_existing": True}
+
+    server_name: str = Field(default="", title="ServerName")
+    user_id: str = Field(default="", title="user_id")
+
+    @classmethod
+    @with_session
+    async def get_by_server_name(
+        cls: Type[T_MCQQRconWhitelist],
+        session: AsyncSession,
+        server_name: str,
+    ) -> List["MCQQRconWhitelist"]:
+        """按服务器名称查询所有白名单记录"""
+        result = await session.execute(
+            select(cls).where(cls.server_name == server_name)  # type: ignore
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    @with_session
+    async def get_by_user_id(
+        cls: Type[T_MCQQRconWhitelist],
+        session: AsyncSession,
+        user_id: str,
+    ) -> List["MCQQRconWhitelist"]:
+        """按用户ID查询所有关联的服务器白名单记录"""
+        result = await session.execute(
+            select(cls).where(cls.user_id == user_id)  # type: ignore
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    @with_session
+    async def get_by_server_and_user(
+        cls: Type[T_MCQQRconWhitelist],
+        session: AsyncSession,
+        server_name: str,
+        user_id: str,
+    ) -> Optional["MCQQRconWhitelist"]:
+        """按服务器名称和用户ID查询白名单记录"""
+        result = await session.execute(
+            select(cls).where(
+                cls.server_name == server_name,  # type: ignore
+                cls.user_id == user_id,  # type: ignore
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @classmethod
+    @with_session
+    async def is_whitelisted(
+        cls: Type[T_MCQQRconWhitelist],
+        session: AsyncSession,
+        server_name: str,
+        user_id: str,
+    ) -> bool:
+        """检查指定用户是否在指定服务器的 RCON 白名单中"""
+        result = await session.execute(
+            select(cls).where(
+                cls.server_name == server_name,  # type: ignore
+                cls.user_id == user_id,  # type: ignore
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
+    @classmethod
+    @with_session
+    async def get_all(
+        cls: Type[T_MCQQRconWhitelist],
+        session: AsyncSession,
+    ) -> List["MCQQRconWhitelist"]:
+        """获取所有白名单记录"""
+        result = await session.execute(select(cls))
+        return list(result.scalars().all())
+
+
 @site.register_admin
 class MCQQServerAdmin(GsAdminModel):
     pk_name = "id"
@@ -163,3 +244,14 @@ class MCQQBindAdmin(GsAdminModel):
         icon="fa fa-link",
     )  # type: ignore
     model = MCQQBind
+
+
+@site.register_admin
+class MCQQRconWhitelistAdmin(GsAdminModel):
+    pk_name = "id"
+    page_schema = PageSchema(
+        label="RCON白名单",
+        icon="fa fa-shield",
+    )  # type: ignore
+    model = MCQQRconWhitelist
+

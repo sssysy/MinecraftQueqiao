@@ -46,6 +46,30 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
+      },
+      {
+        "name": "增加rcon管理员",
+        "desc": "添加服务器 RCON 白名单管理员",
+        "eg": "增加rcon管理员 @用户 / 增加rcon管理员 [服务器] QQ号",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "删除rcon管理员",
+        "desc": "移除服务器 RCON 白名单管理员",
+        "eg": "删除rcon管理员 @用户 / 删除rcon管理员 [服务器] QQ号",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "查看rcon管理员",
+        "desc": "查看服务器 RCON 白名单管理员列表",
+        "eg": "查看rcon管理员 [服务器]",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
       }
     ]
   },
