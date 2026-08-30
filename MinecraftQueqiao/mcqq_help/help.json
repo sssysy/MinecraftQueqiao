@@ -1,4 +1,46 @@
 {
+  "玩家绑定": {
+    "desc": "用户账号与MC角色绑定管理",
+    "data": [
+      {
+        "name": "绑定",
+        "desc": "绑定自身或代他人绑定MC游戏ID",
+        "eg": "绑定 游戏ID / 绑定 @用户 游戏ID",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "解绑",
+        "desc": "解除绑定的MC游戏ID",
+        "eg": "解绑 / 解绑 @用户",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "我的绑定",
+        "desc": "查询绑定的MC游戏角色名",
+        "eg": "我的绑定 / 查看绑定 @用户",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
+  "私聊互动": {
+    "desc": "向MC游戏内玩家发送私聊",
+    "data": [
+      {
+        "name": "私聊",
+        "desc": "向指定绑定的玩家或游戏ID发送私聊",
+        "eg": "私聊 @用户 消息 / 私聊 Steve 消息",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
   "群服绑定": {
     "desc": "QQ群与MC服务器绑定管理",
     "data": [

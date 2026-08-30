@@ -10,6 +10,7 @@ from gsuid_core.utils.database.startup import exec_list
 T_MCQQServer = TypeVar("T_MCQQServer", bound="MCQQServer")
 T_MCQQBind = TypeVar("T_MCQQBind", bound="MCQQBind")
 T_MCQQRconWhitelist = TypeVar("T_MCQQRconWhitelist", bound="MCQQRconWhitelist")
+T_MCQQUserBind = TypeVar("T_MCQQUserBind", bound="MCQQUserBind")
 
 exec_list.extend(
     [
@@ -226,6 +227,53 @@ class MCQQRconWhitelist(BaseIDModel, table=True):
         return list(result.scalars().all())
 
 
+class MCQQUserBind(BaseIDModel, table=True):
+    """玩家绑定表（用户与MC游戏角色名绑定）"""
+
+    __tablename__ = "MCQQUserBind"
+    __table_args__: Dict[str, Any] = {"extend_existing": True}
+
+    user_id: str = Field(default="", title="用户ID")
+    player_name: str = Field(default="", title="MC游戏ID")
+    bot_id: str = Field(default="", title="平台")
+
+    @classmethod
+    @with_session
+    async def get_by_user_id(
+        cls: Type[T_MCQQUserBind],
+        session: AsyncSession,
+        user_id: str,
+    ) -> Optional["MCQQUserBind"]:
+        """按用户ID查询绑定记录"""
+        result = await session.execute(
+            select(cls).where(cls.user_id == user_id)  # type: ignore
+        )
+        return result.scalar_one_or_none()
+
+    @classmethod
+    @with_session
+    async def get_by_player_name(
+        cls: Type[T_MCQQUserBind],
+        session: AsyncSession,
+        player_name: str,
+    ) -> Optional["MCQQUserBind"]:
+        """按MC游戏ID查询绑定记录"""
+        result = await session.execute(
+            select(cls).where(cls.player_name == player_name)  # type: ignore
+        )
+        return result.scalar_one_or_none()
+
+    @classmethod
+    @with_session
+    async def get_all(
+        cls: Type[T_MCQQUserBind],
+        session: AsyncSession,
+    ) -> List["MCQQUserBind"]:
+        """获取所有玩家绑定记录"""
+        result = await session.execute(select(cls))
+        return list(result.scalars().all())
+
+
 @site.register_admin
 class MCQQServerAdmin(GsAdminModel):
     pk_name = "id"
@@ -254,4 +302,14 @@ class MCQQRconWhitelistAdmin(GsAdminModel):
         icon="fa fa-shield",
     )  # type: ignore
     model = MCQQRconWhitelist
+
+
+@site.register_admin
+class MCQQUserBindAdmin(GsAdminModel):
+    pk_name = "id"
+    page_schema = PageSchema(
+        label="玩家绑定表",
+        icon="fa fa-user",
+    )  # type: ignore
+    model = MCQQUserBind
 
