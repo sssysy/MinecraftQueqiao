@@ -6,6 +6,7 @@ from gsuid_core.sv import Plugins, SV
 from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQBind, MCQQServer
 from ..utils.helpers.group_name import get_group_name
+from ..utils.helpers.prefix_match import is_blacklisted, match_and_trim_prefix
 from ..utils.helpers.user_name import resolve_user_name
 
 sv_mcqq_chat = SV("MC鹊桥聊天转发")
@@ -48,15 +49,19 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     # 纯 at 消息：整条仅含 @ 目标，无法携带前缀，直接放行
     is_pure_at = has_at and all(s["kind"] == "at" for s in segments)
 
-    # 前缀检查（仅对含文本的消息生效；纯 at 消息免前缀）
-    prefix = mcqq_config.get_config("qq_to_mc_prefix").data
-    if prefix and not is_pure_at:
-        # 定位首个文本片段并去掉前缀
+    # 白名单与黑名单检查（仅对含文本的消息生效；纯 at 消息免过滤）
+    whitelist = mcqq_config.get_config("qq_to_mc_whitelist").data
+    blacklist = mcqq_config.get_config("qq_to_mc_blacklist").data
+    has_whitelist = bool(whitelist) if isinstance(whitelist, str) else any(bool(p) for p in (whitelist or []))
+
+    if has_whitelist and not is_pure_at:
+        # 白名单生效：定位首个文本片段并根据前缀/正则匹配与去除
         for i, s in enumerate(segments):
             if s["kind"] == "text":
-                if not s["text"].startswith(prefix):
+                matched, new_text = match_and_trim_prefix(s["text"], whitelist)
+                if not matched:
                     return
-                s["text"] = s["text"][len(prefix):].lstrip()
+                s["text"] = new_text
                 if not s["text"]:
                     del segments[i]
                 break
@@ -65,6 +70,16 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
             return
         if not segments:
             return
+    elif not is_pure_at:
+        # 白名单为空：黑名单生效
+        has_blacklist = bool(blacklist) if isinstance(blacklist, str) else any(bool(p) for p in (blacklist or []))
+        if has_blacklist:
+            for s in segments:
+                if s["kind"] == "text" and is_blacklisted(s["text"], blacklist):
+                    logger.debug(
+                        f"[MCQueQiao] 群 {ev.group_id} 消息命中黑名单 '{s['text']}'，跳过转发"
+                    )
+                    return
 
     # 查询与当前群号绑定的MC服务器
     binds = await MCQQBind.get_by_group_id(ev.group_id)

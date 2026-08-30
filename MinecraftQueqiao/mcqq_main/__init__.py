@@ -9,6 +9,7 @@ from gsuid_core.segment import MessageSegment
 
 from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQBind, MCQQServer
+from ..utils.helpers.prefix_match import is_blacklisted, match_and_trim_prefix
 from ..utils.utils.cicode import parse_cicode
 
 from . import forwarder
@@ -61,16 +62,28 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
         f"text={text}"
     )
 
-    # 触发前缀仅对玩家聊天消息生效，留空则全部转发
-    # 前缀应匹配玩家实际聊天的内容，而非带服务器名前缀的格式化文本
+    # 消息过滤：仅对玩家聊天消息生效
+    # 白名单优先；白名单为空时黑名单生效
     if sub_type in ("player_chat", "chat"):
-        prefix = mcqq_config.get_config("mc_to_qq_prefix").data
-        if prefix:
-            raw_message = str(data.get("message", ""))
-            if not raw_message.lstrip().startswith(prefix):
+        whitelist = mcqq_config.get_config("mc_to_qq_whitelist").data
+        blacklist = mcqq_config.get_config("mc_to_qq_blacklist").data
+        raw_message = str(data.get("message", ""))
+
+        has_whitelist = bool(whitelist) if isinstance(whitelist, str) else any(bool(p) for p in (whitelist or []))
+        if has_whitelist:
+            matched, _ = match_and_trim_prefix(raw_message, whitelist)
+            if not matched:
                 logger.debug(
-                    f"[MCQueQiao] [{server_name}] 玩家聊天内容不以前缀 "
-                    f"'{prefix}' 开头，跳过推送"
+                    f"[MCQueQiao] [{server_name}] 玩家聊天内容未匹配白名单 "
+                    f"{whitelist}，跳过推送"
+                )
+                return
+        else:
+            # 白名单为空：黑名单生效
+            if is_blacklisted(raw_message, blacklist):
+                logger.debug(
+                    f"[MCQueQiao] [{server_name}] 玩家聊天内容匹配黑名单 "
+                    f"{blacklist}，跳过推送"
                 )
                 return
 
@@ -117,10 +130,13 @@ def format_event_message(
 
     if sub_type in ("player_chat", "chat"):
         message = str(data.get("message", ""))
-        # 去除触发前缀，只转发实际聊天内容
-        chat_prefix = mcqq_config.get_config("mc_to_qq_prefix").data
-        if chat_prefix and message.lstrip().startswith(chat_prefix):
-            message = message.lstrip()[len(chat_prefix):]
+        # 若配置了白名单，去除触发前缀（正则匹配则保留原文本）
+        chat_whitelist = mcqq_config.get_config("mc_to_qq_whitelist").data
+        has_whitelist = bool(chat_whitelist) if isinstance(chat_whitelist, str) else any(bool(p) for p in (chat_whitelist or []))
+        if has_whitelist:
+            matched, new_message = match_and_trim_prefix(message, chat_whitelist)
+            if matched:
+                message = new_message
         return f"{prefix}<{player_name}> {message}"
 
     if sub_type in ("player_death", "death"):

@@ -40,11 +40,25 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
     "qq_to_mc_enabled": GsBoolConfig(
         "群聊消息转发", "群聊消息转发到 MC 开关", False
     ),
-    "qq_to_mc_prefix": GsStrConfig(
-        "群聊 -> MC 消息前缀", "触发转发到 MC 服务器需要的前缀，留空则全部转发", "mcqq"
+    "qq_to_mc_whitelist": GsListStrConfig(
+        "群聊 -> MC 消息白名单",
+        "触发转发到 MC 服务器需要的前缀或正则表达式列表。支持普通前缀（如 mcqq，触发后会自动去除前缀）或以 r: 开头的正则表达式（如 r:^#.*，匹配后保留完整内容）。列表留空时黑名单生效",
+        ["mcqq"],
     ),
-    "mc_to_qq_prefix": GsStrConfig(
-        "MC -> 群聊 消息前缀", "触发转发到群聊需要的前缀，留空则全部转发", ""
+    "qq_to_mc_blacklist": GsListStrConfig(
+        "群聊 -> MC 消息黑名单",
+        "屏蔽转发到 MC 服务器的前缀或正则表达式列表。仅在白名单为空时生效。命中任一规则的消息将不会被转发到 MC。支持普通前缀（如 #）或以 r: 开头的正则表达式（如 r:^/.*）",
+        [],
+    ),
+    "mc_to_qq_whitelist": GsListStrConfig(
+        "MC -> 群聊 消息白名单",
+        "触发转发到群聊需要的前缀或正则表达式列表。支持普通前缀（触发后自动去除前缀）或以 r: 开头的正则表达式（匹配后保留完整内容）。列表留空时黑名单生效",
+        [],
+    ),
+    "mc_to_qq_blacklist": GsListStrConfig(
+        "MC -> 群聊 消息黑名单",
+        "屏蔽转发到群聊的前缀或正则表达式列表。仅在白名单为空时生效。命中任一规则的消息将不会被转发到群聊。支持普通前缀或以 r: 开头的正则表达式",
+        [],
     ),
 }
 
