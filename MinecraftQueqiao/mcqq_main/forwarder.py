@@ -138,13 +138,28 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
                             "text": "[图片]",
                             "color": "green",
                             "underlined": True,
+                            # 兼容 1.20.4 及旧版本 (camelCase + value)
                             "clickEvent": {
                                 "action": "open_url",
                                 "value": url,
                             },
+                            # 兼容 1.20.5 / 1.21+ 及新版本 (snake_case + url & value)
+                            "click_event": {
+                                "action": "open_url",
+                                "url": url,
+                                "value": url,
+                            },
+                            # 兼容 1.20.4 及旧版本
                             "hoverEvent": {
                                 "action": "show_text",
-                                "value": [{"text": "点击在浏览器中查看图片"}],
+                                "value": "点击在浏览器中查看图片",
+                                "contents": "点击在浏览器中查看图片",
+                            },
+                            # 兼容 1.20.5 / 1.21+ 及新版本
+                            "hover_event": {
+                                "action": "show_text",
+                                "value": "点击在浏览器中查看图片",
+                                "contents": "点击在浏览器中查看图片",
                             },
                         }
                     )
@@ -156,13 +171,28 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
                             "text": s["text"],
                             "color": "aqua",
                             "underlined": True,
+                            # 兼容 1.20.4 及旧版本
                             "clickEvent": {
                                 "action": "open_url",
                                 "value": url,
                             },
+                            # 兼容 1.20.5 / 1.21+ 及新版本
+                            "click_event": {
+                                "action": "open_url",
+                                "url": url,
+                                "value": url,
+                            },
+                            # 兼容 1.20.4 及旧版本
                             "hoverEvent": {
                                 "action": "show_text",
-                                "value": [{"text": "点击在浏览器中查看/下载文件"}],
+                                "value": "点击在浏览器中查看/下载文件",
+                                "contents": "点击在浏览器中查看/下载文件",
+                            },
+                            # 兼容 1.20.5 / 1.21+ 及新版本
+                            "hover_event": {
+                                "action": "show_text",
+                                "value": "点击在浏览器中查看/下载文件",
+                                "contents": "点击在浏览器中查看/下载文件",
                             },
                         }
                     )
