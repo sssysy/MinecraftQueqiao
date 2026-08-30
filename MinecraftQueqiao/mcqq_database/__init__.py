@@ -11,6 +11,7 @@ T_MCQQServer = TypeVar("T_MCQQServer", bound="MCQQServer")
 T_MCQQBind = TypeVar("T_MCQQBind", bound="MCQQBind")
 T_MCQQRconWhitelist = TypeVar("T_MCQQRconWhitelist", bound="MCQQRconWhitelist")
 T_MCQQUserBind = TypeVar("T_MCQQUserBind", bound="MCQQUserBind")
+T_MCQQPoll = TypeVar("T_MCQQPoll", bound="MCQQPoll")
 
 exec_list.extend(
     [
@@ -317,4 +318,73 @@ class MCQQUserBindAdmin(GsAdminModel):
         icon="fa fa-user",
     )  # type: ignore
     model = MCQQUserBind
+
+
+class MCQQPoll(BaseIDModel, table=True):
+    """定时公告配置表"""
+
+    __tablename__ = "MCQQPoll"
+    __table_args__: Dict[str, Any] = {"extend_existing": True}
+
+    enabled: bool = Field(default=True, title="是否启用")
+    server_name: str = Field(default="", title="ServerName")
+    content: str = Field(default="", title="公告内容")
+    schedule_rule: str = Field(
+        default="",
+        title="推送时间/间隔(cron或时间戳)",
+    )
+    remark: str = Field(default="", title="备注")
+
+    @classmethod
+    @with_session
+    async def get_all_enabled(
+        cls: Type[T_MCQQPoll], session: AsyncSession
+    ) -> List["MCQQPoll"]:
+        """获取所有启用的定时公告配置"""
+        result = await session.execute(
+            select(cls).where(cls.enabled == True)  # type: ignore
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    @with_session
+    async def get_all(
+        cls: Type[T_MCQQPoll], session: AsyncSession
+    ) -> List["MCQQPoll"]:
+        """获取所有定时公告记录"""
+        result = await session.execute(select(cls))
+        return list(result.scalars().all())
+
+    @classmethod
+    @with_session
+    async def get_by_id(
+        cls: Type[T_MCQQPoll], session: AsyncSession, poll_id: int
+    ) -> Optional["MCQQPoll"]:
+        """按主键ID查询定时公告"""
+        result = await session.execute(
+            select(cls).where(cls.id == poll_id)  # type: ignore
+        )
+        return result.scalar_one_or_none()
+
+    @classmethod
+    @with_session
+    async def get_by_server_name(
+        cls: Type[T_MCQQPoll], session: AsyncSession, server_name: str
+    ) -> List["MCQQPoll"]:
+        """按服务器名称查询定时公告"""
+        result = await session.execute(
+            select(cls).where(cls.server_name == server_name)  # type: ignore
+        )
+        return list(result.scalars().all())
+
+
+@site.register_admin
+class MCQQPollAdmin(GsAdminModel):
+    pk_name = "id"
+    page_schema = PageSchema(
+        label="定时公告",
+        icon="fa fa-clock-o",
+    )  # type: ignore
+    model = MCQQPoll
+
 

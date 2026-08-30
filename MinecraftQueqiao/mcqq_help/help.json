@@ -112,6 +112,22 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
+      },
+      {
+        "name": "刷新定时公告",
+        "desc": "重新加载数据库并注册定时公告任务",
+        "eg": "刷新定时公告",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "查看定时公告",
+        "desc": "查看所有定时公告配置与运行状态",
+        "eg": "查看定时公告 / 定时公告列表",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
       }
     ]
   },
