@@ -195,6 +195,7 @@ async def refresh_poll_jobs() -> Tuple[int, int, List[Dict[str, Any]]]:
                 )
             except Exception as e:
                 detail_item["status"] = f"error: {e}"
+                detail_item["desc"] = f"注册失败: {e}"
                 logger.error(f"[MCQueQiao] 注册定时公告 [ID:{poll.id}] 失败: {e}")
         else:
             logger.info(

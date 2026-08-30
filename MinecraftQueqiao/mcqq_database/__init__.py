@@ -331,7 +331,7 @@ class MCQQPoll(BaseIDModel, table=True):
     content: str = Field(default="", title="公告内容")
     schedule_rule: str = Field(
         default="",
-        title="推送时间/间隔(cron或时间戳)",
+        title="推送时间/间隔(五位 cron 或 Unix 时间戳)",
     )
     remark: str = Field(default="", title="备注")
 
