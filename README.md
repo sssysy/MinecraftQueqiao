@@ -57,7 +57,7 @@ websocket_client:
    - `ServerName`: 鹊桥配置中的 `server_name`（或连接 URL 路径后缀）
    - `服务器外显名`: 聊天转发与状态查询时展示的服务器名（留空默认使用 ServerName）
    - `access_token`: 鹊桥密钥（选填，若配置了则需与鹊桥一致）
-   - `启用 ChatImage`: 若安装了 [ChatImage](https://www.mcmod.cn/class/9111.html) MOD 可开启聊天框图片预览
+   - `启用 ChatImage`: 若安装了 [ChatImage](https://www.mcmod.cn/class/9111.html) MOD 可开启聊天框图片预览（未开启时将自动降级为原生可点击超链接 `[图片]`）
 
 #### 6. 插件配置说明
 访问 Gscore `网页控制台 -> 插件配置 -> MinecraftQueqiao`：
@@ -102,7 +102,6 @@ websocket_client:
 |mc绑定id(支持群服同id自动识别)|
 |rcon白名单(增删)|
 |playwright 渲染|
-|非 ChatImage 模式下的链接点击交互 (ClickEvent)|
 |转发指令过滤黑名单|
 |死亡与成就消息本地化汉化|
 |跨服聊天互通(服A <-> 服B)|

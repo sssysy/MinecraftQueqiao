@@ -1,3 +1,5 @@
+from typing import Any
+
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
 from gsuid_core.models import Event
@@ -26,7 +28,7 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
         return
 
     # 按序解析 content 各消息片段，保留原始顺序，避免混发时丢段
-    segments: list[dict[str, str]] = []  # kind: text / at / file / image
+    segments: list[dict[str, Any]] = []  # kind: text / at / file / image
     has_at = False
     for seg in ev.content:
         mtype, data = seg.type, seg.data
@@ -39,8 +41,14 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
             segments.append({"kind": "image", "url": str(data)})
         elif mtype == "file" and data:
             # data 形如 "文件名|url"
-            name, _, _ = str(data).partition("|")
-            segments.append({"kind": "file", "text": f"[文件 - {name.strip()}]"})
+            name, _, file_url = str(data).partition("|")
+            segments.append(
+                {
+                    "kind": "file",
+                    "text": f"[文件 - {name.strip()}]",
+                    "url": file_url.strip() if file_url else "",
+                }
+            )
 
     # 没有任何可转发内容（纯表情/纯语音等被忽略的片段不会进入 segments）则跳过
     if not segments:
@@ -108,7 +116,7 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
         chatimage_enabled = bool(server and server.chatimage_enabled)
 
         # 按序组装：群名 + <昵称> + 各片段（图片按 ChatImage 是否开启处理）
-        formatted: list[dict[str, str]] = []
+        formatted: list[dict[str, Any]] = []
         if group_name:
             formatted.append({"text": f"[{group_name}] ", "color": "yellow"})
         formatted.append(
@@ -116,15 +124,50 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
         )
         for s in segments:
             if s["kind"] == "image":
+                url = s.get("url", "")
                 if chatimage_enabled:
                     formatted.append(
                         {
-                            "text": f"[[CICode,url={s['url']},name=图片]]",
+                            "text": f"[[CICode,url={url},name=图片]]",
                             "color": "white",
                         }
                     )
                 else:
-                    formatted.append({"text": "[图片]", "color": "white"})
+                    formatted.append(
+                        {
+                            "text": "[图片]",
+                            "color": "green",
+                            "underlined": True,
+                            "clickEvent": {
+                                "action": "open_url",
+                                "value": url,
+                            },
+                            "hoverEvent": {
+                                "action": "show_text",
+                                "value": [{"text": "点击在浏览器中查看图片"}],
+                            },
+                        }
+                    )
+            elif s["kind"] == "file":
+                url = s.get("url", "")
+                if url:
+                    formatted.append(
+                        {
+                            "text": s["text"],
+                            "color": "aqua",
+                            "underlined": True,
+                            "clickEvent": {
+                                "action": "open_url",
+                                "value": url,
+                            },
+                            "hoverEvent": {
+                                "action": "show_text",
+                                "value": [{"text": "点击在浏览器中查看/下载文件"}],
+                            },
+                        }
+                    )
+                else:
+                    formatted.append({"text": s["text"], "color": "white"})
             else:
                 formatted.append({"text": s["text"], "color": "white"})
 
