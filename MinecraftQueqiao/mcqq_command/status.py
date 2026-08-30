@@ -84,10 +84,17 @@ async def get_server_status_text(server: MCQQServer) -> str:
         else:
             player_list_str = "（已隐藏）"
 
+        # 延迟信息
+        latency_val = getattr(status, "latency", None)
+        latency_text = (
+            f"{round(latency_val, 1)}ms" if latency_val is not None else "未知"
+        )
+
         lines = [
             f"[{name}] 服务器状态：",
             f"服务器地址：{addr}",
             "在线状态：在线",
+            f"延迟：{latency_text}",
             f"游戏版本：{version_text}",
             f"服务器简介：{desc_text}",
             f"玩家数量：{online_cnt} / {max_cnt}",
