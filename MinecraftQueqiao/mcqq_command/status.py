@@ -1,15 +1,13 @@
 import asyncio
 import re
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional
 
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
-from ..mcqq_core import send_rcon_command
 from ..mcqq_database import MCQQBind, MCQQServer
-from ..mcqq_ws import ws_manager
 from ..utils.helpers.server_select import resolve_servers
 
 try:
@@ -39,39 +37,6 @@ def clean_motd(motd: Any) -> str:
     return " ".join(lines) if lines else "无"
 
 
-def parse_rcon_list(
-    out_str: str,
-) -> Tuple[Optional[int], Optional[int], Optional[str]]:
-    """从 RCON list 指令返回文本解析在线人数、最大人数和玩家列表"""
-    # 匹配英文：There are X of a max of Y players online: name1, name2
-    match_en = re.search(
-        r"There are (\d+) of a max(?:imum)? of (\d+) players online(?::\s*(.*))?",
-        out_str,
-        re.IGNORECASE,
-    )
-    if match_en:
-        online = int(match_en.group(1))
-        max_p = int(match_en.group(2))
-        names = (match_en.group(3) or "").strip()
-        return online, max_p, names if names else "无"
-
-    # 匹配中文：当前有 X/Y 名玩家在线：name1, name2
-    match_zh = re.search(
-        r"当前有\s*(\d+)\s*(?:/|个玩家在线.*?最大\s*|名玩家在线.*?最大\s*)(\d+)",
-        out_str,
-    )
-    if match_zh:
-        online = int(match_zh.group(1))
-        max_p = int(match_zh.group(2))
-        colon_idx = out_str.find("：")
-        if colon_idx == -1:
-            colon_idx = out_str.find(":")
-        names = out_str[colon_idx + 1 :].strip() if colon_idx != -1 else ""
-        return online, max_p, names if names else "无"
-
-    return None, None, None
-
-
 async def query_mc_status(address: str, timeout: float = 3.5) -> Any:
     """使用 mcstatus 异步查询 Minecraft 服务器直连状态"""
     if JavaServer is None:
@@ -90,7 +55,7 @@ async def query_mc_status(address: str, timeout: float = 3.5) -> Any:
 
 
 async def get_server_status_text(server: MCQQServer) -> str:
-    """通过 mcstatus 查询服务器状态并格式化文本"""
+    """通过 mcstatus 原生协议直接获取并格式化服务器状态"""
     name = server.display_name or server.server_name
     addr = server.server_address.strip() if server.server_address else ""
     if not addr:
@@ -98,7 +63,7 @@ async def get_server_status_text(server: MCQQServer) -> str:
 
     status = await query_mc_status(addr) if addr else None
 
-    # 直连成功
+    # 直连查询成功
     if status is not None:
         version_text = clean_motd(status.version.name)
         raw_desc = getattr(status, "description", None) or getattr(
@@ -108,30 +73,12 @@ async def get_server_status_text(server: MCQQServer) -> str:
         online_cnt = status.players.online
         max_cnt = status.players.max
 
-        player_names = []
+        # 从协议原生 players.sample 提取在线玩家列表
         if status.players.sample:
             player_names = [
                 p.name for p in status.players.sample if p and p.name
             ]
-
-        # 若服务端隐藏了玩家列表，但在 WS 连接状态下可调用 RCON /list 获取玩家名
-        if (
-            not player_names
-            and online_cnt > 0
-            and ws_manager.is_connected(server.server_name)
-        ):
-            succ, out = await send_rcon_command(
-                server.server_name, "list", timeout=3.0
-            )
-            if succ and out:
-                _, _, rcon_p = parse_rcon_list(str(out))
-                if rcon_p and rcon_p != "无":
-                    player_names = [
-                        p.strip() for p in rcon_p.split(",") if p.strip()
-                    ]
-
-        if player_names:
-            player_list_str = ", ".join(player_names)
+            player_list_str = ", ".join(player_names) if player_names else "无"
         elif online_cnt == 0:
             player_list_str = "无"
         else:
@@ -158,7 +105,7 @@ async def get_server_status_text(server: MCQQServer) -> str:
 
 
 @sv_mcqq_status.on_command(
-    ("查看", "查看服务器", "查询服务器", "服务器信息", "服务器状态")
+    ("查看", "服务器状态")
 )
 async def status_command(bot: Bot, ev: Event) -> None:
     text = ev.text.strip()
