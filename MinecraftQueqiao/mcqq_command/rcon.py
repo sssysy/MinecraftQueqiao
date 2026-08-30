@@ -76,7 +76,7 @@ async def _parse_rcon_admin_args(
     return servers, unique_user_ids, None
 
 
-@sv_mcqq_rcon.on_prefix("rcon")
+@sv_mcqq_rcon.on_command("rcon")
 async def rcon_command(bot: Bot, ev: Event) -> None:
     if ev.user_type != "group" or not ev.group_id:
         await bot.send("请在群聊中使用 mcrcon <指令>")
@@ -128,7 +128,7 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
     await bot.send("\n\n".join(results))
 
 
-@sv_mcqq_rcon_admin.on_prefix(("增加rcon管理员", "添加rcon管理员"))
+@sv_mcqq_rcon_admin.on_command(("增加rcon管理员", "添加rcon管理员"))
 async def add_rcon_admin(bot: Bot, ev: Event) -> None:
     servers, user_ids, err = await _parse_rcon_admin_args(ev)
     if err:
@@ -170,7 +170,7 @@ async def add_rcon_admin(bot: Bot, ev: Event) -> None:
     await bot.send("\n".join(results))
 
 
-@sv_mcqq_rcon_admin.on_prefix(("删除rcon管理员", "移除rcon管理员"))
+@sv_mcqq_rcon_admin.on_command(("删除rcon管理员", "移除rcon管理员"))
 async def delete_rcon_admin(bot: Bot, ev: Event) -> None:
     servers, user_ids, err = await _parse_rcon_admin_args(ev)
     if err:
@@ -212,7 +212,7 @@ async def delete_rcon_admin(bot: Bot, ev: Event) -> None:
     await bot.send("\n".join(results))
 
 
-@sv_mcqq_rcon_admin.on_prefix(("查看rcon管理员", "查询rcon管理员", "rcon管理员列表", "rcon白名单列表", "rcon白名单"))
+@sv_mcqq_rcon_admin.on_command(("查看rcon管理员", "查询rcon管理员", "rcon管理员列表", "rcon白名单列表", "rcon白名单"))
 async def list_rcon_admin(bot: Bot, ev: Event) -> None:
     text = ev.text.strip()
     servers: Optional[List[MCQQServer]] = None

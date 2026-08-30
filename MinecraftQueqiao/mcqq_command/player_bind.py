@@ -37,7 +37,7 @@ def _parse_target_and_val(
     return ev.user_id, raw_text, False
 
 
-@sv_mcqq_player_bind.on_prefix("绑定")
+@sv_mcqq_player_bind.on_command("绑定")
 async def bind_player_command(bot: Bot, ev: Event) -> None:
     """绑定 Minecraft 游戏角色名。
     用法：
@@ -87,7 +87,7 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
             await bot.send(f"绑定成功：已将您的账号绑定至 MC 角色 {player_name}")
 
 
-@sv_mcqq_player_bind.on_prefix(("解绑", "解除绑定"))
+@sv_mcqq_player_bind.on_command(("解绑", "解除绑定"))
 async def unbind_player_command(bot: Bot, ev: Event) -> None:
     """解除 Minecraft 游戏角色名绑定。
     用法：
@@ -139,7 +139,7 @@ async def unbind_player_command(bot: Bot, ev: Event) -> None:
         await bot.send("解绑失败，请稍后重试")
 
 
-@sv_mcqq_player_bind.on_prefix(("我的绑定", "查看绑定", "查询绑定", "玩家绑定"))
+@sv_mcqq_player_bind.on_command(("我的绑定", "查看绑定", "查询绑定", "玩家绑定"))
 async def check_player_bind_command(bot: Bot, ev: Event) -> None:
     """查询绑定信息。
     用法：

@@ -95,7 +95,7 @@ async def _get_target_servers(ev: Event) -> Tuple[List[MCQQServer], Optional[str
         return servers, None
 
 
-@sv_mcqq_whisper.on_prefix(("私聊", "私信"))
+@sv_mcqq_whisper.on_command(("私聊", "私信"))
 async def whisper_command(bot: Bot, ev: Event) -> None:
     """向 Minecraft 玩家发送私聊消息（通过 tellraw）。
     用法：

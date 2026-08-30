@@ -9,7 +9,7 @@ from ..utils.helpers.server_select import resolve_servers
 sv_mcqq_bind = SV("鹊桥群服相关指令")
 
 
-@sv_mcqq_bind.on_prefix("群服绑定")
+@sv_mcqq_bind.on_command("群服绑定")
 async def bind_server(bot: Bot, ev: Event) -> None:
     # 仅在群聊中执行绑定
     if ev.user_type != "group" or not ev.group_id:
@@ -70,7 +70,7 @@ async def bind_server(bot: Bot, ev: Event) -> None:
     )
 
 
-@sv_mcqq_bind.on_prefix("群服解绑")
+@sv_mcqq_bind.on_command("群服解绑")
 async def unbind_server(bot: Bot, ev: Event) -> None:
     # 仅在群聊中执行解绑
     if ev.user_type != "group" or not ev.group_id:
