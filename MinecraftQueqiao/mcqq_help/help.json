@@ -98,6 +98,14 @@
         "need_admin": true
       },
       {
+        "name": "动作栏",
+        "desc": "向MC服务器发送快捷动作栏浮屏消息",
+        "eg": "动作栏 [服务器] 维护通知",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
         "name": "RCON指令",
         "desc": "通过WebSocket执行控制台指令",
         "eg": "rcon say hello",

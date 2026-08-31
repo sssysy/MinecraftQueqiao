@@ -79,6 +79,27 @@ async def send_title(
     return await ws_manager.send_json(server_name, message)
 
 
+async def send_action_bar(
+    server_name: str,
+    message: Union[str, List[dict], dict],
+    echo: str = "",
+) -> bool:
+    """向指定服务器发送动作栏消息 (send_actionbar API)"""
+    if isinstance(message, str):
+        components = [{"text": message, "color": "white"}]
+    elif isinstance(message, dict):
+        components = [message]
+    else:
+        components = message
+
+    msg_payload = {
+        "api": "send_actionbar",
+        "data": {"message": components},
+        "echo": echo,
+    }
+    return await ws_manager.send_json(server_name, msg_payload)
+
+
 async def send_rcon_command(
     server_name: str,
     command: str,
