@@ -66,6 +66,22 @@
     "desc": "广播、公告与WS控制台指令",
     "data": [
       {
+        "name": "添加服务器",
+        "desc": "私聊多步会话添加/配置MC服务器",
+        "eg": "添加服务器",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "删除服务器",
+        "desc": "删除指定的MC服务器配置及关联群绑定",
+        "eg": "删除服务器 服务器名/ID",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
         "name": "广播",
         "desc": "向MC服务器发送屏幕大标题(Title)",
         "eg": "广播 欢迎来到服务器",

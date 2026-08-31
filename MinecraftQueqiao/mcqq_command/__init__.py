@@ -3,6 +3,7 @@ from . import broadcast
 from . import player_bind
 from . import poll
 from . import rcon
+from . import server_add
 from . import status
 from . import whisper
-from . import ws
+from . import ws
