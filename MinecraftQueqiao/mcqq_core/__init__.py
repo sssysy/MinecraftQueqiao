@@ -146,19 +146,3 @@ async def send_rcon_command(
     )
 
 
-async def get_server_status_api(
-    server_name: str,
-    timeout: float = 4.0,
-) -> Tuple[bool, Any]:
-    """通过 WebSocket 异步调用鹊桥 get_status API 获取服务器原生状态数据
-
-    Returns:
-        (success: bool, data_or_error: Any)
-    """
-    return await ws_manager.request(
-        server_name=server_name,
-        api="get_status",
-        data={},
-        timeout=timeout,
-    )
-

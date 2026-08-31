@@ -11,6 +11,7 @@ from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQBind, MCQQServer
 from ..utils.helpers.prefix_match import is_fake_player
 from ..utils.helpers.server_select import resolve_servers
+from ..utils.utils.format_code import strip_minecraft_formatting_codes
 
 try:
     from mcstatus import JavaServer
@@ -34,7 +35,7 @@ def clean_motd(motd: Any) -> str:
         text = str(motd)
 
     # 去除 § 与 \u00a7 颜色格式化代码
-    text = re.sub(r"[§\u00a7][0-9a-fk-orA-FK-OR]", "", text)
+    text = strip_minecraft_formatting_codes(text)
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return " ".join(lines) if lines else "无"
 
@@ -114,6 +115,8 @@ async def get_server_status_text(server: MCQQServer) -> str:
         "在线状态：离线",
     ]
     return "\n".join(lines)
+
+
 
 
 @sv_mcqq_status.on_command(

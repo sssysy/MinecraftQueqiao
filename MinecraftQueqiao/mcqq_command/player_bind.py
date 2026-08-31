@@ -6,35 +6,9 @@ from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
 from ..mcqq_database import MCQQUserBind
+from ..utils.helpers.user_select import extract_single_target_user
 
 sv_mcqq_player_bind = SV("鹊桥玩家绑定")
-
-
-def _parse_target_and_val(
-    ev: Event,
-) -> Tuple[str, str, bool]:
-    """解析目标用户 ID 与后置参数值。
-
-    Returns:
-        (target_user_id, remaining_text, is_for_other)
-    """
-    raw_text = ev.text.strip()
-
-    # 检查 @用户
-    if ev.at_list:
-        for at_item in ev.at_list:
-            if at_item and str(at_item).strip():
-                return str(at_item).strip(), raw_text, True
-    elif ev.at and ev.at.strip():
-        return ev.at.strip(), raw_text, True
-
-    tokens = raw_text.split(maxsplit=1)
-    if len(tokens) >= 2:
-        first_tok = tokens[0].lstrip("@")
-        if first_tok.isdigit():
-            return first_tok, tokens[1].strip(), True
-
-    return ev.user_id, raw_text, False
 
 
 @sv_mcqq_player_bind.on_command("绑定")
@@ -44,7 +18,11 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
       mc绑定 <游戏ID>
       mc绑定 <@用户/QQ号> <游戏ID> (代绑)
     """
-    target_uid, player_name, is_for_other = _parse_target_and_val(ev)
+    target_uid, player_name, is_for_other = extract_single_target_user(
+        ev, default_to_sender=True
+    )
+    if not target_uid:
+        target_uid = ev.user_id
 
     if is_for_other and ev.user_pm > 3:
         await bot.send("权限不足：只有管理员可以为其他用户绑定 MC 角色")
@@ -94,24 +72,11 @@ async def unbind_player_command(bot: Bot, ev: Event) -> None:
       mc解绑
       mc解绑 <@用户/QQ号> (管理员代解绑)
     """
-    raw_text = ev.text.strip()
-    target_uid = ev.user_id
-    is_for_other = False
-
-    if ev.at_list:
-        for at_item in ev.at_list:
-            if at_item and str(at_item).strip():
-                target_uid = str(at_item).strip()
-                is_for_other = True
-                break
-    elif ev.at and ev.at.strip():
-        target_uid = ev.at.strip()
-        is_for_other = True
-    elif raw_text:
-        tok = raw_text.split()[0].lstrip("@")
-        if tok.isdigit():
-            target_uid = tok
-            is_for_other = True
+    target_uid, _, is_for_other = extract_single_target_user(
+        ev, default_to_sender=True
+    )
+    if not target_uid:
+        target_uid = ev.user_id
 
     if is_for_other and ev.user_pm > 3:
         await bot.send("权限不足：只有管理员可以为其他用户解除 MC 绑定")
@@ -146,24 +111,11 @@ async def check_player_bind_command(bot: Bot, ev: Event) -> None:
       mc我的绑定
       mc查看绑定 [@用户/QQ号]
     """
-    raw_text = ev.text.strip()
-    target_uid = ev.user_id
-    is_for_other = False
-
-    if ev.at_list:
-        for at_item in ev.at_list:
-            if at_item and str(at_item).strip():
-                target_uid = str(at_item).strip()
-                is_for_other = True
-                break
-    elif ev.at and ev.at.strip():
-        target_uid = ev.at.strip()
-        is_for_other = True
-    elif raw_text:
-        tok = raw_text.split()[0].lstrip("@")
-        if tok.isdigit():
-            target_uid = tok
-            is_for_other = True
+    target_uid, _, is_for_other = extract_single_target_user(
+        ev, default_to_sender=True
+    )
+    if not target_uid:
+        target_uid = ev.user_id
 
     existing = await MCQQUserBind.get_by_user_id(target_uid)
     if not existing:

@@ -187,37 +187,3 @@ async def refresh_poll_jobs() -> Tuple[int, int, List[Dict[str, Any]]]:
 
     return len(polls), registered_count, details
 
-
-async def get_poll_jobs_status() -> List[Dict[str, Any]]:
-    """获取所有定时公告的当前配置及调度状态"""
-    all_polls = await MCQQPoll.get_all()
-    active_jobs = {job.id: job for job in scheduler.get_jobs()}
-
-    status_list: List[Dict[str, Any]] = []
-    for poll in all_polls:
-        job_id = f"mcqq_poll_{poll.id}"
-        rule_type, _, desc = parse_schedule_rule(poll.schedule_rule)
-        job = active_jobs.get(job_id)
-
-        next_time_str = (
-            job.next_run_time.strftime("%Y-%m-%d %H:%M:%S")
-            if (job and job.next_run_time)
-            else "无"
-        )
-
-        status_list.append(
-            {
-                "id": poll.id,
-                "enabled": poll.enabled,
-                "server_name": poll.server_name,
-                "content": poll.content,
-                "schedule_rule": poll.schedule_rule,
-                "rule_type": rule_type,
-                "desc": desc,
-                "is_active": job is not None,
-                "next_run_time": next_time_str,
-                "remark": poll.remark,
-            }
-        )
-
-    return status_list

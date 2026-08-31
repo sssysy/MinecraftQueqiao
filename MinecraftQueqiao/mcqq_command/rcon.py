@@ -9,29 +9,11 @@ from ..mcqq_config import mcqq_config
 from ..mcqq_core import send_rcon_command
 from ..mcqq_database import MCQQBind, MCQQServer, MCQQRconWhitelist
 from ..utils.helpers.prefix_match import is_command_blacklisted
-from ..utils.helpers.server_select import resolve_servers
+from ..utils.helpers.server_select import get_group_target_servers, resolve_servers
+from ..utils.helpers.user_select import extract_all_target_users
 
 sv_mcqq_rcon = SV("鹊桥 RCON 指令", pm=6)
 sv_mcqq_rcon_admin = SV("鹊桥 RCON 管理员管理", pm=3)
-
-
-async def _get_targets(
-    group_id: str, servers: Optional[List[MCQQServer]]
-) -> List[MCQQServer]:
-    """按群绑定 + 选择器筛选目标服务器。servers 为 None 表示全部绑定。"""
-    binds = await MCQQBind.get_by_group_id(group_id)
-    if not binds:
-        return []
-    selected_ids = {s.id for s in servers} if servers is not None else None
-    targets: List[MCQQServer] = []
-    for bind in binds:
-        server = await MCQQServer.get_by_name(bind.server_name)
-        if server is None:
-            continue
-        if selected_ids is not None and server.id not in selected_ids:
-            continue
-        targets.append(server)
-    return targets
 
 
 async def _parse_rcon_admin_args(
@@ -54,27 +36,7 @@ async def _parse_rcon_admin_args(
         else:
             user_tokens = raw_tokens
 
-    user_ids: List[str] = []
-    if ev.at_list:
-        for at_item in ev.at_list:
-            if at_item and str(at_item).strip():
-                user_ids.append(str(at_item).strip())
-    elif ev.at:
-        if ev.at.strip():
-            user_ids.append(ev.at.strip())
-
-    for tok in user_tokens:
-        tok_clean = tok.strip().lstrip("@")
-        if tok_clean.isdigit():
-            user_ids.append(tok_clean)
-
-    seen = set()
-    unique_user_ids = []
-    for uid in user_ids:
-        if uid not in seen:
-            seen.add(uid)
-            unique_user_ids.append(uid)
-
+    unique_user_ids = extract_all_target_users(ev, extra_tokens=user_tokens)
     return servers, unique_user_ids, None
 
 
@@ -109,7 +71,7 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
         await bot.send("黑名单指令，跳过传递")
         return
 
-    targets = await _get_targets(ev.group_id, servers)
+    targets = await get_group_target_servers(ev.group_id, servers)
     if not targets:
         await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
         return

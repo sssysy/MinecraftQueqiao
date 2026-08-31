@@ -10,6 +10,7 @@ from ..mcqq_core import send_rcon_command
 from ..mcqq_database import MCQQBind, MCQQServer, MCQQUserBind
 from ..mcqq_ws import ws_manager
 from ..utils.helpers.component import parse_text_or_json_component
+from ..utils.helpers.user_select import extract_at_user_ids
 
 sv_mcqq_whisper = SV("鹊桥私聊指令")
 
@@ -27,17 +28,12 @@ async def _parse_whisper_args(
     content: str = ""
 
     # 1. 优先提取 @用户
-    if ev.at_list:
-        for at_item in ev.at_list:
-            if at_item and str(at_item).strip():
-                target_uid = str(at_item).strip()
-                break
-    elif ev.at and ev.at.strip():
-        target_uid = ev.at.strip()
-
-    if target_uid:
+    at_users = extract_at_user_ids(ev)
+    if at_users:
+        target_uid = at_users[0]
         content = raw_text
     else:
+
         parts = raw_text.split(maxsplit=1)
         if len(parts) < 2:
             return (

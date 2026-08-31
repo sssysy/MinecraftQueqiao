@@ -6,30 +6,12 @@ from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
 from ..mcqq_core import send_action_bar, send_broadcast, send_title
-from ..mcqq_database import MCQQBind, MCQQServer
+from ..mcqq_database import MCQQServer
 from ..utils.helpers.component import parse_text_or_json_component
-from ..utils.helpers.server_select import resolve_servers
+from ..utils.helpers.server_select import get_group_target_servers, resolve_servers
 
 sv_mcqq_broadcast = SV("鹊桥广播与公告指令", pm=3)
 
-
-async def _get_targets(
-    group_id: str, servers: Optional[List[MCQQServer]]
-) -> List[MCQQServer]:
-    """按群绑定 + 选择器筛选目标服务器。servers 为 None 表示全部绑定。"""
-    binds = await MCQQBind.get_by_group_id(group_id)
-    if not binds:
-        return []
-    selected_ids = {s.id for s in servers} if servers is not None else None
-    targets: List[MCQQServer] = []
-    for bind in binds:
-        server = await MCQQServer.get_by_name(bind.server_name)
-        if server is None:
-            continue
-        if selected_ids is not None and server.id not in selected_ids:
-            continue
-        targets.append(server)
-    return targets
 
 
 @sv_mcqq_broadcast.on_command("广播")
@@ -60,7 +42,7 @@ async def title_broadcast_command(bot: Bot, ev: Event) -> None:
         await bot.send("广播内容为空，请提供要广播的文本")
         return
 
-    targets = await _get_targets(ev.group_id, servers)
+    targets = await get_group_target_servers(ev.group_id, servers)
     if not targets:
         await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
         return
@@ -117,7 +99,7 @@ async def chat_broadcast_command(bot: Bot, ev: Event) -> None:
         await bot.send("公告内容为空，请提供要发布的公告文本")
         return
 
-    targets = await _get_targets(ev.group_id, servers)
+    targets = await get_group_target_servers(ev.group_id, servers)
     if not targets:
         await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
         return
@@ -174,7 +156,7 @@ async def actionbar_broadcast_command(bot: Bot, ev: Event) -> None:
         await bot.send("动作栏内容为空，请提供要展示的文本")
         return
 
-    targets = await _get_targets(ev.group_id, servers)
+    targets = await get_group_target_servers(ev.group_id, servers)
     if not targets:
         await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
         return
