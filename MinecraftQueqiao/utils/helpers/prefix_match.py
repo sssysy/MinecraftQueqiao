@@ -102,3 +102,50 @@ def is_fake_player(player_name: str, filter_list: list[str] | str) -> bool:
 
     return False
 
+
+def is_command_blacklisted(command: str, blacklist: list[str] | str) -> bool:
+    """检查指令是否命中黑名单规则（支持带/不带前导斜杠，普通前缀匹配或以 'r:' 开头的正则表达式）。
+
+    规则：
+    - 若 blacklist 为空列表或无有效规则，返回 False。
+    - 统一去除前后空白及前导 '/' 进行匹配，同时保留原字符串校验。
+    - 若规则以 'r:' 开头，对原指令及去除 '/' 后的指令进行正则搜索（re.search）。
+    - 若规则为普通字符串，对原指令及去除 '/' 后的指令进行前缀匹配。
+    - 均未命中返回 False。
+    """
+    if not command:
+        return False
+    if isinstance(blacklist, str):
+        blacklist = [blacklist] if blacklist else []
+
+    patterns = [p.strip() for p in blacklist if p and p.strip()]
+    if not patterns:
+        return False
+
+    cmd_raw = command.strip()
+    cmd_no_slash = cmd_raw.lstrip("/")
+
+    for p in patterns:
+        if p.startswith("r:"):
+            pattern = p[2:]
+            try:
+                if re.search(pattern, cmd_raw, re.IGNORECASE) or re.search(
+                    pattern, cmd_no_slash, re.IGNORECASE
+                ):
+                    return True
+            except re.error as e:
+                logger.warning(f"[MCQueQiao] 指令黑名单正则表达式 '{pattern}' 语法错误: {e}")
+        else:
+            p_clean = p.lstrip("/").lower()
+            p_raw = p.lower()
+            cmd_lower = cmd_no_slash.lower()
+            cmd_raw_lower = cmd_raw.lower()
+            if (
+                cmd_lower.startswith(p_clean)
+                or cmd_raw_lower.startswith(p_raw)
+                or cmd_raw_lower.startswith("/" + p_clean)
+            ):
+                return True
+
+    return False
+

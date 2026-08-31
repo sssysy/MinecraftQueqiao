@@ -62,8 +62,13 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
     ),
     "fake_player_filter": GsListStrConfig(
         "假人过滤列表",
-        "过滤假人/Bot的玩家名或正则表达式列表（以 r: 开头）。匹配到的玩家事件将不会转发到群聊。详情参考 README",
+        "过滤假人/Bot的玩家名或正则表达式列表。详情参考 README",
         [],
+    ),
+    "command_blacklist": GsListStrConfig(
+        "转发指令过滤黑名单",
+        "屏蔽转发到 MC 服务器执行的指令列表。详情参考 README",
+        ["stop"],
     ),
 }
 

@@ -5,8 +5,10 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
+from ..mcqq_config import mcqq_config
 from ..mcqq_core import send_rcon_command
 from ..mcqq_database import MCQQBind, MCQQServer, MCQQRconWhitelist
+from ..utils.helpers.prefix_match import is_command_blacklisted
 from ..utils.helpers.server_select import resolve_servers
 
 sv_mcqq_rcon = SV("鹊桥 RCON 指令", pm=6)
@@ -99,6 +101,12 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
 
     if not command:
         await bot.send("指令内容为空，请提供要执行的 Minecraft 指令")
+        return
+
+    # 指令黑名单检查
+    blacklist = mcqq_config.get_config("command_blacklist").data
+    if is_command_blacklisted(command, blacklist):
+        await bot.send("黑名单指令，跳过传递")
         return
 
     targets = await _get_targets(ev.group_id, servers)

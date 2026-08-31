@@ -7,6 +7,7 @@ from ..mcqq_config import mcqq_config
 from ..mcqq_main import ws_event_handler
 from ..mcqq_ws import ws_manager
 from ..utils.helpers.component import parse_text_or_json_component
+from ..utils.helpers.prefix_match import is_command_blacklisted
 
 
 async def handle_ws_message(server_name: str, raw_message: str) -> None:
@@ -124,6 +125,13 @@ async def send_rcon_command(
     Returns:
         (success: bool, result_text_or_error: str)
     """
+    blacklist = mcqq_config.get_config("command_blacklist").data
+    if is_command_blacklisted(command, blacklist):
+        logger.warning(
+            f"[MCQueQiao] [{server_name}] 指令 '{command}' 命中黑名单，跳过传递"
+        )
+        return False, "黑名单指令，跳过传递"
+
     if timeout is None:
         try:
             timeout = float(mcqq_config.get_config("rcon_timeout").data)
