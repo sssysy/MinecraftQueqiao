@@ -1,4 +1,3 @@
-import json
 from typing import List, Optional
 
 from gsuid_core.bot import Bot
@@ -8,6 +7,7 @@ from gsuid_core.sv import SV
 
 from ..mcqq_core import send_action_bar, send_broadcast, send_title
 from ..mcqq_database import MCQQBind, MCQQServer
+from ..utils.helpers.component import parse_text_or_json_component
 from ..utils.helpers.server_select import resolve_servers
 
 sv_mcqq_broadcast = SV("鹊桥广播与公告指令", pm=3)
@@ -65,11 +65,9 @@ async def title_broadcast_command(bot: Bot, ev: Event) -> None:
         await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
         return
 
-    # 判断是否为 JSON
-    try:
-        title_payload = json.loads(content)
-    except Exception:
-        title_payload = content
+    title_payload = parse_text_or_json_component(
+        content, default_color="yellow", bold=True
+    )
 
     success_servers = []
     fail_servers = []
@@ -124,10 +122,9 @@ async def chat_broadcast_command(bot: Bot, ev: Event) -> None:
         await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
         return
 
-    formatted_msg = [
-        {"text": "[公告] ", "color": "gold", "bold": True},
-        {"text": content, "color": "white"},
-    ]
+    formatted_msg = parse_text_or_json_component(
+        content, default_color="white", default_prefix="[公告] "
+    )
 
     success_servers = []
     fail_servers = []
@@ -182,13 +179,9 @@ async def actionbar_broadcast_command(bot: Bot, ev: Event) -> None:
         await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
         return
 
-    # 判断是否为 JSON
-    try:
-        actionbar_payload = json.loads(content)
-    except Exception:
-        actionbar_payload = [
-            {"text": content, "color": "aqua"}
-        ]
+    actionbar_payload = parse_text_or_json_component(
+        content, default_color="aqua"
+    )
 
     success_servers = []
     fail_servers = []

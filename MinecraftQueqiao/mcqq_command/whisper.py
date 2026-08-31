@@ -9,6 +9,7 @@ from gsuid_core.sv import SV
 from ..mcqq_core import send_rcon_command
 from ..mcqq_database import MCQQBind, MCQQServer, MCQQUserBind
 from ..mcqq_ws import ws_manager
+from ..utils.helpers.component import parse_text_or_json_component
 
 sv_mcqq_whisper = SV("鹊桥私聊指令")
 
@@ -127,8 +128,16 @@ async def whisper_command(bot: Bot, ev: Event) -> None:
     components = [
         {"text": f"<{sender_name}(", "color": "white"},
         {"text": "私聊", "color": "yellow"},
-        {"text": f")> {content}", "color": "white"},
+        {"text": ")> ", "color": "white"},
     ]
+    parsed_content = parse_text_or_json_component(content, default_color="white")
+    if isinstance(parsed_content, list):
+        components.extend(parsed_content)
+    elif isinstance(parsed_content, dict):
+        components.append(parsed_content)
+    else:
+        components.append({"text": str(content), "color": "white"})
+
     tellraw_json_str = json.dumps(components, ensure_ascii=False)
 
     target_selector = f'"{player_name}"' if " " in player_name else player_name

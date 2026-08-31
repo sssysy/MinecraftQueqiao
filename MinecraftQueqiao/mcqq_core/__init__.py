@@ -6,6 +6,7 @@ from gsuid_core.server import on_core_start
 from ..mcqq_config import mcqq_config
 from ..mcqq_main import ws_event_handler
 from ..mcqq_ws import ws_manager
+from ..utils.helpers.component import parse_text_or_json_component
 
 
 async def handle_ws_message(server_name: str, raw_message: str) -> None:
@@ -25,12 +26,14 @@ async def init_mcqq_connections() -> None:
 
 async def send_broadcast(
     server_name: str,
-    text: Union[str, List[dict]],
+    text: Union[str, List[dict], dict],
     echo: str = "",
 ) -> bool:
     """向指定服务器发送聊天栏广播消息 (broadcast API)"""
     if isinstance(text, str):
-        components = [{"text": text, "color": "white"}]
+        components = parse_text_or_json_component(text, default_color="white")
+    elif isinstance(text, dict):
+        components = [text]
     else:
         components = text
 
@@ -44,19 +47,23 @@ async def send_broadcast(
 
 async def send_title(
     server_name: str,
-    title: Union[str, dict],
-    subtitle: Optional[Union[str, dict]] = None,
+    title: Union[str, dict, list],
+    subtitle: Optional[Union[str, dict, list]] = None,
     fade_in: int = 20,
     stay: int = 70,
     fade_out: int = 20,
     echo: str = "",
 ) -> bool:
     """向指定服务器发送屏幕大标题消息 (send_title API)"""
-    title_obj = (
-        {"text": title, "color": "yellow", "bold": True}
-        if isinstance(title, str)
-        else title
-    )
+    if isinstance(title, str):
+        title_obj = parse_text_or_json_component(
+            title, default_color="yellow", bold=True
+        )
+    elif isinstance(title, (dict, list)):
+        title_obj = title
+    else:
+        title_obj = {"text": str(title), "color": "yellow", "bold": True}
+
     data: dict[str, Any] = {
         "title": title_obj,
         "fade_in": fade_in,
@@ -64,11 +71,14 @@ async def send_title(
         "fade_out": fade_out,
     }
     if subtitle is not None:
-        subtitle_obj = (
-            {"text": subtitle, "color": "white"}
-            if isinstance(subtitle, str)
-            else subtitle
-        )
+        if isinstance(subtitle, str):
+            subtitle_obj = parse_text_or_json_component(
+                subtitle, default_color="white"
+            )
+        elif isinstance(subtitle, (dict, list)):
+            subtitle_obj = subtitle
+        else:
+            subtitle_obj = {"text": str(subtitle), "color": "white"}
         data["subtitle"] = subtitle_obj
 
     message = {
@@ -86,11 +96,15 @@ async def send_action_bar(
 ) -> bool:
     """向指定服务器发送动作栏消息 (send_actionbar API)"""
     if isinstance(message, str):
-        components = [{"text": message, "color": "white"}]
+        components = parse_text_or_json_component(
+            message, default_color="aqua"
+        )
     elif isinstance(message, dict):
         components = [message]
-    else:
+    elif isinstance(message, list):
         components = message
+    else:
+        components = [{"text": str(message), "color": "aqua"}]
 
     msg_payload = {
         "api": "send_actionbar",

@@ -12,6 +12,7 @@ from gsuid_core.logger import logger
 from ..mcqq_core import send_broadcast
 from ..mcqq_database import MCQQPoll, MCQQServer
 from ..mcqq_ws import ws_manager
+from ..utils.helpers.component import parse_text_or_json_component
 
 TZ_SHANGHAI = ZoneInfo("Asia/Shanghai")
 
@@ -28,42 +29,37 @@ def parse_schedule_rule(rule_str: str) -> Tuple[str, Optional[Any], str]:
         (rule_type: str, trigger_or_dt: Optional[Any], description: str)
     """
     rule = rule_str.strip()
-    if not rule or rule in ("0", "none", "null", "false", "-1"):
-        return ("none", None, "未配置/不推送")
+    if not rule or rule.lower() in ("0", "none", "null", "false"):
+        return ("none", None, "未配置推送规则")
 
-    # 1. 尝试判定是否为纯数字/浮点数 Unix 时间戳
-    try:
-        ts = float(rule)
-        # 13位毫秒时间戳转换
-        if ts >= 1e11:
+    # 1. 尝试判定是否为纯数字时间戳
+    if rule.isdigit():
+        ts = int(rule)
+        if ts > 10**11:
             ts = ts / 1000.0
+        dt = datetime.fromtimestamp(ts, tz=TZ_SHANGHAI)
+        now = datetime.now(tz=TZ_SHANGHAI)
+        if dt <= now:
+            return ("expired", dt, f"已过期 ({dt.strftime('%Y-%m-%d %H:%M:%S')})")
+        trigger = DateTrigger(run_date=dt, timezone=TZ_SHANGHAI)
+        return ("timestamp", trigger, f"一次性推送 ({dt.strftime('%Y-%m-%d %H:%M:%S')})")
 
-        if ts >= 100000000:
-            dt = datetime.fromtimestamp(ts, tz=TZ_SHANGHAI)
-            now = datetime.now(tz=TZ_SHANGHAI)
-            dt_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-            if dt <= now:
-                return ("expired", dt, f"已过期时间戳 ({dt_str})")
-            else:
-                trigger = DateTrigger(run_date=dt, timezone=TZ_SHANGHAI)
-                return ("timestamp", trigger, f"一次性推送 ({dt_str})")
-    except ValueError:
-        pass
-
-    # 2. 尝试判定是否为标准日期时间格式 (ISO-8601 / "YYYY-MM-DD HH:MM:SS")
-    if ("-" in rule or "/" in rule) and (":" in rule or " " in rule or "T" in rule):
-        clean_rule = rule.replace("/", "-")
+    # 2. 尝试判定是否为 ISO / 常见格式日期字符串
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y/%m/%d %H:%M:%S",
+        "%Y/%m/%d %H:%M",
+        "%Y-%m-%dT%H:%M:%S",
+    ):
         try:
-            dt = datetime.fromisoformat(clean_rule)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=TZ_SHANGHAI)
+            dt_naive = datetime.strptime(rule, fmt)
+            dt = dt_naive.replace(tzinfo=TZ_SHANGHAI)
             now = datetime.now(tz=TZ_SHANGHAI)
-            dt_str = dt.strftime("%Y-%m-%d %H:%M:%S")
             if dt <= now:
-                return ("expired", dt, f"已过期时间 ({dt_str})")
-            else:
-                trigger = DateTrigger(run_date=dt, timezone=TZ_SHANGHAI)
-                return ("timestamp", trigger, f"一次性推送 ({dt_str})")
+                return ("expired", dt, f"已过期 ({dt.strftime('%Y-%m-%d %H:%M:%S')})")
+            trigger = DateTrigger(run_date=dt, timezone=TZ_SHANGHAI)
+            return ("timestamp", trigger, f"一次性推送 ({dt.strftime('%Y-%m-%d %H:%M:%S')})")
         except ValueError:
             pass
 
@@ -79,24 +75,9 @@ def parse_schedule_rule(rule_str: str) -> Tuple[str, Optional[Any], str]:
 
 async def send_poll_message(poll_id: int, server_name: str, content: str) -> bool:
     """向指定服务器（或全部服务器）发送定时公告消息，支持富文本 JSON 格式"""
-    # 尝试解析 JSON 格式的花样文本 (Minecraft Raw JSON Text)
-    try:
-        parsed = json.loads(content)
-        if isinstance(parsed, list):
-            formatted_msg = parsed
-        elif isinstance(parsed, dict):
-            formatted_msg = [parsed]
-        else:
-            formatted_msg = [
-                {"text": "[定时公告] ", "color": "gold", "bold": True},
-                {"text": str(parsed), "color": "white"},
-            ]
-    except Exception:
-        # 普通纯文本格式
-        formatted_msg = [
-            {"text": "[定时公告] ", "color": "gold", "bold": True},
-            {"text": content, "color": "white"},
-        ]
+    formatted_msg = parse_text_or_json_component(
+        content, default_color="white", default_prefix="[定时公告] "
+    )
 
     # 确定目标服务器列表（留空或 all 则发送给全部已启用/已连接服务器）
     target_servers: List[str] = []
