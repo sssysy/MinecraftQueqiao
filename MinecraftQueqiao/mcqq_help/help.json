@@ -115,6 +115,14 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
+      },
+      {
+        "name": "mod搜索",
+        "desc": "在 MC 百科搜索模组资料与链接",
+        "eg": "mod搜索 jei",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
       }
     ]
   },
