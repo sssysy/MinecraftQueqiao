@@ -116,6 +116,6 @@ async def search_mcmod(keyword: str, max_results: int = 10) -> str:
     display_results = results[:max_results]
     lines = ["搜索到以下结果："]
     for name, link in display_results:
-        lines.append(f"{name}：{link}")
+        lines.append(f"\n{name}\n{link}")
 
     return "\n".join(lines)
