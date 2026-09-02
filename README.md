@@ -5,6 +5,10 @@
 </p>
 <h1 align="center">MinecraftQueqiao</h1>
 <h4 align="center">基于 gsuid_core 和鹊桥的反向 WebSocket 互通插件</h4>
+<p align="center">
+  <a href="https://www.python.org/" target="_blank"><img src="https://img.shields.io/badge/Python-3.12+-blue" alt="Python 3.12+"></a>
+  <a href="https://github.com/Genshin-bots/gsuid_core" target="_blank"><img src="https://img.shields.io/badge/gsuid_core-0.10.7+-orange" alt="gsuid_core 0.10.7+"></a>
+</p>
 <div align="center">
   <a href="https://docs.sayu-bot.com/" target="_blank">安装文档 (gscore)</a> &nbsp; · &nbsp;
   <a href="https://queqiao-docs.pages.dev/deploy/" target="_blank">安装文档 (QueQiao)</a> &nbsp; · &nbsp;
