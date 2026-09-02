@@ -1,54 +1,34 @@
 from gsuid_core.bot import Bot
-from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
-from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQServer
-from ..mcqq_main import ws_event_handler
 from ..mcqq_ws import ws_manager
 
-sv_mcqq_refresh = SV("鹊桥ws相关指令")
+sv_mcqq_ws = SV("鹊桥ws连接状态指令", pm=3)
 
 
-@sv_mcqq_refresh.on_fullmatch("刷新ws连接")
-async def refresh_ws_connections(bot: Bot, ev: Event) -> None:
-    logger.info(
-        f"[MCQueQiao] 用户 {ev.user_id} 触发刷新 WS 连接列表"
-    )
-
-    # 停止所有现有连接
-    await ws_manager.stop_all()
-
-    # 读取全局配置
-    reconnect_interval: int = mcqq_config.get_config(
-        "reconnect_interval"
-    ).data
-    max_retries: int = mcqq_config.get_config(
-        "max_reconnect_times"
-    ).data
-
-    # 从数据库重新加载启用的服务器
+@sv_mcqq_ws.on_fullmatch(("连接状态", "ws状态", "WS状态", "刷新ws连接"))
+async def check_ws_status(bot: Bot, ev: Event) -> None:
     servers = await MCQQServer.get_all_enabled()
     if not servers:
-        logger.warning("[MCQueQiao] 没有启用的服务器配置，跳过连接")
-        await bot.send("刷新完成，但当前没有启用的服务器配置")
+        await bot.send("当前未配置任何启用的 MC 服务器")
         return
 
-    logger.info(
-        f"[MCQueQiao] 找到 {len(servers)} 个启用的服务器配置"
-    )
+    connected_count = 0
+    lines = ["【Minecraft 鹊桥连接状态】"]
+    for server in servers:
+        name = server.display_name or server.server_name
+        is_conn = ws_manager.is_connected(server.server_name)
+        if is_conn:
+            connected_count += 1
+            status_tag = "🟢 在线"
+        else:
+            status_tag = "🔴 离线"
 
-    await ws_manager.start_all(
-        servers=servers,
-        reconnect_interval=reconnect_interval,
-        max_retries=max_retries,
-        message_handler=ws_event_handler,
-    )
+        lines.append(f"• {name} ({server.server_name}): {status_tag}")
 
-    await bot.send(
-        f"WS 连接已刷新：正向 "
-        f"{sum(1 for s in servers if s.ws_mode != 'server')} 个，"
-        f"反向 "
-        f"{sum(1 for s in servers if s.ws_mode == 'server')} 个"
+    lines.append(
+        f"\n共 {len(servers)} 个配置服务器，已连接: {connected_count} 个"
     )
+    await bot.send("\n".join(lines))

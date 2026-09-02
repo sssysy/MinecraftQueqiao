@@ -1,4 +1,3 @@
-import json
 from typing import List, Optional
 
 from gsuid_core.bot import Bot
@@ -6,149 +5,181 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
-from ..mcqq_database import MCQQBind, MCQQServer
-from ..mcqq_rcon import RCONError, execute
-from ..utils.helpers.server_select import resolve_servers
+from ..mcqq_core import send_action_bar, send_broadcast, send_title
+from ..mcqq_database import MCQQServer
+from ..utils.helpers.component import parse_text_or_json_component
+from ..utils.helpers.server_select import get_group_target_servers, resolve_servers
 
-sv_mcqq_broadcast = SV("鹊桥广播指令", pm=3)
-
-
-def _build_title_json(content: str) -> str:
-    """将纯文本构建为黄色加粗的 title JSON 文本。"""
-    return json.dumps(
-        {"text": content, "color": "yellow", "bold": True},
-        ensure_ascii=False,
-    )
+sv_mcqq_broadcast = SV("鹊桥广播与公告指令", pm=3)
 
 
-async def _get_targets(
-    group_id: str, servers: Optional[List[MCQQServer]]
-) -> List[MCQQServer]:
-    """按群绑定 + 选择器筛选目标服务器。servers 为 None 表示全部绑定。"""
-    binds = await MCQQBind.get_by_group_id(group_id)
-    if not binds:
-        return []
-    selected_ids = {s.id for s in servers} if servers is not None else None
-    targets: List[MCQQServer] = []
-    for bind in binds:
-        server = await MCQQServer.get_by_name(bind.server_name)
-        if server is None:
-            continue
-        if selected_ids is not None and server.id not in selected_ids:
-            continue
-        targets.append(server)
-    return targets
 
-
-@sv_mcqq_broadcast.on_prefix("广播")
-async def broadcast_command(bot: Bot, ev: Event) -> None:
+@sv_mcqq_broadcast.on_command("广播")
+async def title_broadcast_command(bot: Bot, ev: Event) -> None:
+    """mc广播: 走鹊桥 send_title (屏幕大标题)"""
     if ev.user_type != "group" or not ev.group_id:
         await bot.send("请在群聊中使用 mc广播 <内容> 指令")
         return
 
     text = ev.text.strip()
     if not text:
-        await bot.send(
-            "用法：mc广播 <广播内容> 或 mc广播 [服务器] <广播内容>"
-        )
+        await bot.send("用法：mc广播 <广播内容> 或 mc广播 [服务器] <广播内容>")
         return
 
-    # JSON 内容直接透传，不参与服务器选择器解析
-    try:
-        json.loads(text)
-    except json.JSONDecodeError:
-        is_json = False
-    else:
-        is_json = True
-
-    if is_json:
-        command = f"title @a title {text}"
-        servers: Optional[List[MCQQServer]] = None
-    else:
-        servers = None
-        parts = text.split(maxsplit=1)
+    servers: Optional[List[MCQQServer]] = None
+    parts = text.split(maxsplit=1)
+    if parts:
         resolved, _ = await resolve_servers(parts[0])
         if resolved is not None:
-            # 首词命中服务器，余下内容作为正文
             servers = resolved
             content = parts[1].strip() if len(parts) > 1 else ""
-            if not content:
-                await bot.send("广播内容为空，请提供要广播的文本")
-                return
         else:
-            # 首词不是任何服务器，将整个输入当作正文广播到全部绑定服务器
             content = text
-        command = f"title @a title {_build_title_json(content)}"
+    else:
+        content = text
 
-    targets = await _get_targets(ev.group_id, servers)
+    if not content:
+        await bot.send("广播内容为空，请提供要广播的文本")
+        return
+
+    targets = await get_group_target_servers(ev.group_id, servers)
     if not targets:
         await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
         return
 
-    # 明确指定服务器：该服务器未开启 RCON 则提示功能依赖
-    if servers is not None:
-        server = targets[0]
-        if not server.rcon_enabled:
-            await bot.send(
-                f"服务器 [{server.server_name}] 未开启 RCON 功能，"
-                "此功能依赖 RCON，请先在网页控制台开启后重试"
-            )
-            return
-        try:
-            await execute(server, command)
-            await bot.send(
-                f"广播成功！涉及的服务器：\n [{server.server_name}]"
-            )
-        except RCONError as e:
-            logger.error(
-                f"[MCQueQiao] [{server.server_name}] 广播失败: {e}"
-            )
-            await bot.send(f"推送失败：{e}")
-        except Exception as e:
-            logger.error(
-                f"[MCQueQiao] [{server.server_name}] 广播未知错误: {e}"
-            )
-            await bot.send(f" [{server.server_name}] 推送失败，详见控制台")
-        return
+    title_payload = parse_text_or_json_component(
+        content, default_color="yellow", bold=True
+    )
 
-    # 广播到全部绑定服务器：跳过未开启 RCON 的服务器
-    enabled = [s for s in targets if s.rcon_enabled]
-    skipped = len(targets) - len(enabled)
-    if not enabled:
-        await bot.send(
-            "推送失败：当前群绑定的服务器均未开启 RCON 功能，"
-            "此功能依赖 RCON"
-        )
-        return
+    success_servers = []
+    fail_servers = []
+
+    for server in targets:
+        server_display = server.display_name or server.server_name
+        ok = await send_title(server.server_name, title=title_payload)
+        if ok:
+            success_servers.append(server_display)
+        else:
+            fail_servers.append(f"[{server_display}] 未连接或发送失败")
 
     results = []
-    good_servers = []
-    bad_servers = []
-    for server in enabled:
-        try:
-            await execute(server, command)
-            good_servers.append(server.server_name)
-        except RCONError as e:
-            logger.error(
-                f"[MCQueQiao] [{server.server_name}] 广播失败: {e}"
-            )
-            bad_servers.append(f" [{server.server_name}] 推送失败: {e}")
-        except Exception as e:
-            logger.error(
-                f"[MCQueQiao] [{server.server_name}] 广播未知错误: {e}"
-            )
-            bad_servers.append(f" [{server.server_name}] 推送失败，详见控制台")
+    if success_servers:
+        results.append(f"屏幕大标题广播成功！涉及的服务器：\n" + ", ".join(success_servers))
+    if fail_servers:
+        results.extend(fail_servers)
 
-    success = len(good_servers)
-    if success:
-        results.append(
-            "广播成功！涉及的服务器：\n " + ", ".join(good_servers)
-        )
-    results.extend(bad_servers)
-    if skipped:
-        results.append("部分服务器未开启rcon功能，无法推送")
+    await bot.send("\n\n".join(results))
 
-    if success == 0:
-        await bot.send("推送失败：\n" + "\n".join(results))
+
+@sv_mcqq_broadcast.on_command("公告")
+async def chat_broadcast_command(bot: Bot, ev: Event) -> None:
+    """mc公告: 走鹊桥 broadcast (聊天栏广播)"""
+    if ev.user_type != "group" or not ev.group_id:
+        await bot.send("请在群聊中使用 mc公告 <内容> 指令")
+        return
+
+    text = ev.text.strip()
+    if not text:
+        await bot.send("用法：mc公告 <公告内容> 或 mc公告 [服务器] <公告内容>")
+        return
+
+    servers: Optional[List[MCQQServer]] = None
+    parts = text.split(maxsplit=1)
+    if parts:
+        resolved, _ = await resolve_servers(parts[0])
+        if resolved is not None:
+            servers = resolved
+            content = parts[1].strip() if len(parts) > 1 else ""
+        else:
+            content = text
     else:
-        await bot.send("\n".join(results))
+        content = text
+
+    if not content:
+        await bot.send("公告内容为空，请提供要发布的公告文本")
+        return
+
+    targets = await get_group_target_servers(ev.group_id, servers)
+    if not targets:
+        await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
+        return
+
+    formatted_msg = parse_text_or_json_component(
+        content, default_color="white", default_prefix="[公告] "
+    )
+
+    success_servers = []
+    fail_servers = []
+
+    for server in targets:
+        server_display = server.display_name or server.server_name
+        ok = await send_broadcast(server.server_name, formatted_msg)
+        if ok:
+            success_servers.append(server_display)
+        else:
+            fail_servers.append(f"[{server_display}] 未连接或发送失败")
+
+    results = []
+    if success_servers:
+        results.append(f"聊天栏公告发布成功！涉及的服务器：\n" + ", ".join(success_servers))
+    if fail_servers:
+        results.extend(fail_servers)
+
+    await bot.send("\n\n".join(results))
+
+
+@sv_mcqq_broadcast.on_command(("动作栏", "actionbar", "状态栏"))
+async def actionbar_broadcast_command(bot: Bot, ev: Event) -> None:
+    """mc动作栏: 走鹊桥 send_actionbar (动作栏消息)"""
+    if ev.user_type != "group" or not ev.group_id:
+        await bot.send("请在群聊中使用 mc动作栏 <内容> 指令")
+        return
+
+    text = ev.text.strip()
+    if not text:
+        await bot.send("用法：mc动作栏 <内容> 或 mc动作栏 [服务器] <内容>")
+        return
+
+    servers: Optional[List[MCQQServer]] = None
+    parts = text.split(maxsplit=1)
+    if parts:
+        resolved, _ = await resolve_servers(parts[0])
+        if resolved is not None:
+            servers = resolved
+            content = parts[1].strip() if len(parts) > 1 else ""
+        else:
+            content = text
+    else:
+        content = text
+
+    if not content:
+        await bot.send("动作栏内容为空，请提供要展示的文本")
+        return
+
+    targets = await get_group_target_servers(ev.group_id, servers)
+    if not targets:
+        await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
+        return
+
+    actionbar_payload = parse_text_or_json_component(
+        content, default_color="aqua"
+    )
+
+    success_servers = []
+    fail_servers = []
+
+    for server in targets:
+        server_display = server.display_name or server.server_name
+        ok = await send_action_bar(server.server_name, message=actionbar_payload)
+        if ok:
+            success_servers.append(server_display)
+        else:
+            fail_servers.append(f"[{server_display}] 未连接或发送失败")
+
+    results = []
+    if success_servers:
+        results.append(f"动作栏消息发送成功！涉及的服务器：\n" + ", ".join(success_servers))
+    if fail_servers:
+        results.extend(fail_servers)
+
+    await bot.send("\n\n".join(results))
