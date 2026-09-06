@@ -1,19 +1,27 @@
 {
-  "群服绑定": {
-    "desc": "QQ群与MC服务器绑定管理",
+  "绑定相关": {
+    "desc": "用户账号与群服绑定管理",
     "data": [
       {
-        "name": "群服绑定",
-        "desc": "将当前群绑定到MC服务器",
-        "eg": "群服绑定 服务器名",
+        "name": "绑定",
+        "desc": "绑定 MC 游戏 ID",
+        "eg": "绑定 Notch",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
       },
       {
-        "name": "群服解绑",
-        "desc": "解除群与MC服务器的绑定",
-        "eg": "群服解绑 服务器名",
+        "name": "解绑",
+        "desc": "解除绑定 MC 游戏 ID",
+        "eg": "解绑",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "我的绑定",
+        "desc": "查询绑定的MC游戏角色名",
+        "eg": "查看绑定",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
@@ -21,49 +29,134 @@
     ]
   },
   "服务器管理": {
-    "desc": "广播与RCON远程指令",
+    "desc": "服务器配置、广播与控制台指令",
     "data": [
       {
+        "name": "添加服务器",
+        "desc": "添加 MC 服务器",
+        "eg": "添加服务器",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "删除服务器",
+        "desc": "删除指定的 MC 服务器配置及关联群绑定",
+        "eg": "删除服务器 Server",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "群服绑定",
+        "desc": "将当前群绑定到MC服务器",
+        "eg": "群服绑定 Server",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "群服解绑",
+        "desc": "解除群与 MC 服务器的绑定",
+        "eg": "群服解绑 Server",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
         "name": "广播",
-        "desc": "向MC服务器发送标题广播",
-        "eg": "广播 欢迎来到服务器",
+        "desc": "向 MC 服务器发送大标题",
+        "eg": "广播 欢迎进入",
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
       },
       {
-        "name": "RCON指令",
-        "desc": "远程执行MC服务器指令",
-        "eg": "rcon say hello",
+        "name": "公告",
+        "desc": "向 MC 服务器聊天栏发布文字",
+        "eg": "公告 活动即将开始",
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
       },
       {
-        "name": "刷新RCON连接",
-        "desc": "刷新RCON连接状态",
-        "eg": "刷新rcon连接",
+        "name": "动作栏",
+        "desc": "向 MC 服务器发送物品栏上方文字",
+        "eg": "动作栏 即将清理掉落物",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "rcon 指令",
+        "desc": "执行控制台指令",
+        "eg": "rcon time set day",
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
       }
     ]
   },
-  "状态与连接": {
-    "desc": "服务器状态查询与WebSocket管理",
+  "玩家功能": {
+    "desc": "实用功能",
     "data": [
       {
         "name": "查看服务器",
-        "desc": "查询MC服务器在线状态与玩家列表",
-        "eg": "查看",
+        "desc": "查看服务器状态",
+        "eg": "查看 (Server)",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
       },
       {
-        "name": "刷新WS连接",
-        "desc": "刷新WebSocket连接",
-        "eg": "刷新ws连接",
+        "name": "私信",
+        "desc": "向指定绑定的玩家或游戏ID发送私聊",
+        "eg": "私信 Notch 我先下了",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "mod搜索",
+        "desc": "在 MC 百科搜索模组资料与链接",
+        "eg": "mod搜索 jei",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
+  "其他功能": {
+    "desc": "RCON管理员权限管理",
+    "data": [
+      {
+        "name": "增加rcon管理员",
+        "desc": "添加服务器 RCON 白名单管理员",
+        "eg": "增加rcon管理员 @用户",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "删除rcon管理员",
+        "desc": "移除服务器 RCON 白名单管理员",
+        "eg": "删除rcon管理员 @用户",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "查看rcon管理员",
+        "desc": "查看服务器 RCON 白名单管理员列表",
+        "eg": "查看rcon管理员(Server)",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "连接状态",
+        "desc": "查看所有MC服务器的反向WS连接状态",
+        "eg": "连接状态",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false

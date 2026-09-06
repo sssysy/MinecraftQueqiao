@@ -1,6 +1,27 @@
 from typing import List, Optional, Tuple
 
-from ...mcqq_database import MCQQServer
+from ...mcqq_database import MCQQBind, MCQQServer
+
+
+
+async def get_group_target_servers(
+    group_id: str, servers: Optional[List[MCQQServer]] = None
+) -> List[MCQQServer]:
+    """按群绑定 + 可选选择器筛选目标服务器。servers 为 None 表示当前群绑定的全部服务器。"""
+    binds = await MCQQBind.get_by_group_id(group_id)
+    if not binds:
+        return []
+    selected_ids = {s.id for s in servers} if servers is not None else None
+    targets: List[MCQQServer] = []
+    for bind in binds:
+        server = await MCQQServer.get_by_name(bind.server_name)
+        if server is None:
+            continue
+        if selected_ids is not None and server.id not in selected_ids:
+            continue
+        targets.append(server)
+    return targets
+
 
 
 async def resolve_servers(
