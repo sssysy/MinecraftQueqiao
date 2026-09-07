@@ -26,15 +26,43 @@ async def _parse_rcon_admin_args(
     raw_tokens = ev.text.strip().split()
     servers: Optional[List[MCQQServer]] = None
     user_tokens: List[str] = []
+    at_users = extract_all_target_users(ev)
 
-    if raw_tokens:
-        first_token = raw_tokens[0]
-        resolved, _ = await resolve_servers(first_token)
-        if resolved is not None:
+    if at_users:
+        # 已通过 @用户 指定目标用户，此时 raw_tokens[0] 若存在必为服务器参数
+        if raw_tokens:
+            first_token = raw_tokens[0]
+            resolved, err = await resolve_servers(first_token)
+            if err:
+                return None, [], err
             servers = resolved
             user_tokens = raw_tokens[1:]
-        else:
-            user_tokens = raw_tokens
+    else:
+        # 未通过 @用户 指定目标用户，需从 raw_tokens 中解析服务器和/或 QQ 号
+        if raw_tokens:
+            first_token = raw_tokens[0]
+            clean_first = first_token.strip().lstrip("@")
+            if not clean_first.isdigit():
+                # 非纯数字必为服务器名称/外显名
+                resolved, err = await resolve_servers(first_token)
+                if err:
+                    return None, [], err
+                servers = resolved
+                user_tokens = raw_tokens[1:]
+            else:
+                # 纯数字：可能是服务器 ID 或用户 QQ 号
+                # 若只有一个 token，必须作为目标用户 QQ 号（由群绑定推断服务器）
+                if len(raw_tokens) == 1:
+                    user_tokens = raw_tokens
+                else:
+                    # 多个 token：优先尝试按服务器 ID 匹配
+                    server = await MCQQServer.get_by_id(int(clean_first))
+                    if server is not None:
+                        servers = [server]
+                        user_tokens = raw_tokens[1:]
+                    else:
+                        # 无法匹配为服务器 ID，则作为纯数字 QQ 号列表兜底
+                        user_tokens = raw_tokens
 
     unique_user_ids = extract_all_target_users(ev, extra_tokens=user_tokens)
     return servers, unique_user_ids, None
@@ -112,7 +140,7 @@ async def add_rcon_admin(bot: Bot, ev: Event) -> None:
     if servers is not None:
         targets = servers
     elif ev.user_type == "group" and ev.group_id:
-        targets = await _get_targets(ev.group_id, None)
+        targets = await get_group_target_servers(ev.group_id, None)
         if not targets:
             await bot.send("当前群未绑定任何服务器，请指定服务器（例如：mc增加rcon管理员 生存服 @用户）或先执行 mc群服绑定")
             return
@@ -154,7 +182,7 @@ async def delete_rcon_admin(bot: Bot, ev: Event) -> None:
     if servers is not None:
         targets = servers
     elif ev.user_type == "group" and ev.group_id:
-        targets = await _get_targets(ev.group_id, None)
+        targets = await get_group_target_servers(ev.group_id, None)
         if not targets:
             await bot.send("当前群未绑定任何服务器，请指定服务器（例如：mc删除rcon管理员 生存服 @用户）或先执行 mc群服绑定")
             return
@@ -196,7 +224,7 @@ async def list_rcon_admin(bot: Bot, ev: Event) -> None:
     if servers is not None:
         targets = servers
     elif ev.user_type == "group" and ev.group_id:
-        targets = await _get_targets(ev.group_id, None)
+        targets = await get_group_target_servers(ev.group_id, None)
         if not targets:
             await bot.send("当前群未绑定任何服务器，请指定服务器（例如：mc查看rcon管理员 生存服）或先执行 mc群服绑定")
             return

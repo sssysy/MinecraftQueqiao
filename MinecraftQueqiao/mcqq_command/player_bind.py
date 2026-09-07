@@ -19,7 +19,7 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
       mc绑定 <@用户/QQ号> <游戏ID> (代绑)
     """
     target_uid, player_name, is_for_other = extract_single_target_user(
-        ev, default_to_sender=True
+        ev, default_to_sender=True, allow_bare_target=False
     )
     if not target_uid:
         target_uid = ev.user_id
@@ -31,6 +31,12 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
     player_name = player_name.strip()
     if not player_name:
         await bot.send("用法：mc绑定 <游戏ID> 或 mc绑定 <@用户/QQ号> <游戏ID>")
+        return
+
+    # 查重：阻止同一 MC 角色名绑定到多个用户
+    bound_user = await MCQQUserBind.get_by_player_name(player_name)
+    if bound_user and bound_user.user_id != target_uid:
+        await bot.send("该玩家已被绑定！")
         return
 
     # 查询现有绑定
@@ -73,7 +79,7 @@ async def unbind_player_command(bot: Bot, ev: Event) -> None:
       mc解绑 <@用户/QQ号> (管理员代解绑)
     """
     target_uid, _, is_for_other = extract_single_target_user(
-        ev, default_to_sender=True
+        ev, default_to_sender=True, allow_bare_target=True
     )
     if not target_uid:
         target_uid = ev.user_id
@@ -112,7 +118,7 @@ async def check_player_bind_command(bot: Bot, ev: Event) -> None:
       mc查看绑定 [@用户/QQ号]
     """
     target_uid, _, is_for_other = extract_single_target_user(
-        ev, default_to_sender=True
+        ev, default_to_sender=True, allow_bare_target=True
     )
     if not target_uid:
         target_uid = ev.user_id

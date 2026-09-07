@@ -26,8 +26,8 @@ class WSManager:
         if not hasattr(self, "_initialized"):
             # server_name -> WebSocket
             self.active_connections: Dict[str, WebSocket] = {}
-            # echo -> Future[dict]
-            self._pending_requests: Dict[str, asyncio.Future[dict]] = {}
+            # echo -> (server_name, Future[dict])
+            self._pending_requests: Dict[str, Tuple[str, asyncio.Future[dict]]] = {}
             # 外部事件处理器回调 (server_name, raw_message) -> None
             self.message_handler: Optional[
                 Callable[[str, str], Awaitable[None]]
@@ -62,6 +62,24 @@ class WSManager:
             self._send_locks[server_name] = asyncio.Lock()
         return self._send_locks[server_name]
 
+    def _cancel_pending_requests(
+        self, server_name: str, reason: str = "服务器连接已断开"
+    ) -> None:
+        """取消指定服务器所有等待中的请求，唤醒对应 Future 并抛出 ConnectionError"""
+        to_cancel = [
+            (echo, future)
+            for echo, (sname, future) in self._pending_requests.items()
+            if sname == server_name
+        ]
+        for echo, future in to_cancel:
+            self._pending_requests.pop(echo, None)
+            if not future.done():
+                future.set_exception(ConnectionError(reason))
+        if to_cancel:
+            logger.debug(
+                f"[MCQueQiao] [{server_name}] 已取消 {len(to_cancel)} 个等待中的请求: {reason}"
+            )
+
     async def register_connection(
         self, server_name: str, websocket: WebSocket
     ) -> None:
@@ -72,6 +90,7 @@ class WSManager:
                 await old_ws.close(code=1000, reason="Replaced by new connection")
             except Exception:
                 pass
+            self._cancel_pending_requests(server_name, "连接已被新连接替换")
         self.active_connections[server_name] = websocket
         logger.info(
             f"[MCQueQiao] [{server_name}] 鹊桥反向 WebSocket 已连接 (已在线: {self.get_connected_servers()})"
@@ -84,6 +103,7 @@ class WSManager:
         current_ws = self.active_connections.get(server_name)
         if websocket is None or current_ws is websocket:
             self.active_connections.pop(server_name, None)
+            self._cancel_pending_requests(server_name, "服务器连接已断开")
             logger.info(f"[MCQueQiao] [{server_name}] 鹊桥反向 WebSocket 已断开")
 
     async def send_json(self, server_name: str, message: dict) -> bool:
@@ -128,7 +148,7 @@ class WSManager:
         echo = str(uuid.uuid4())
         loop = asyncio.get_running_loop()
         future: asyncio.Future[dict] = loop.create_future()
-        self._pending_requests[echo] = future
+        self._pending_requests[echo] = (server_name, future)
 
         message = {
             "api": api,
@@ -152,6 +172,11 @@ class WSManager:
                 f"[MCQueQiao] [{server_name}] API 请求超时 ({timeout}s): api={api}, echo={echo}"
             )
             return False, "指令执行超时"
+        except ConnectionError as e:
+            logger.warning(
+                f"[MCQueQiao] [{server_name}] API 请求连接中断: {e}"
+            )
+            return False, "服务器连接已断开"
         except Exception as e:
             logger.error(
                 f"[MCQueQiao] [{server_name}] API 请求异常: {e}"
@@ -162,10 +187,12 @@ class WSManager:
 
     def resolve_response(self, echo: str, response_data: dict) -> bool:
         """如果收到 API 响应包，根据 echo 唤醒等待中的 Future"""
-        future = self._pending_requests.get(echo)
-        if future is not None and not future.done():
-            future.set_result(response_data)
-            return True
+        item = self._pending_requests.get(echo)
+        if item is not None:
+            _, future = item
+            if not future.done():
+                future.set_result(response_data)
+                return True
         return False
 
 

@@ -6,7 +6,7 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import SV, get_plugin_available_prefix
 
-from ..mcqq_database import MCQQBind, MCQQServer
+from ..mcqq_database import MCQQBind, MCQQPoll, MCQQRconWhitelist, MCQQServer
 from ..utils.helpers.server_select import resolve_servers
 
 sv_mcqq_server_manage = SV("鹊桥服务器管理指令", pm=3)
@@ -122,13 +122,16 @@ async def delete_server_command(bot: Bot, ev: Event) -> None:
         return
     server = servers[0]
 
+    # 先清理从表关联记录（RCON 白名单、群绑定、定时公告）
+    await MCQQRconWhitelist.delete_row(server_name=server.server_name)
+    await MCQQBind.delete_row(server_name=server.server_name)
+    await MCQQPoll.delete_row(server_name=server.server_name)
+
     # 删除服务器记录
     res = await MCQQServer.delete_row(id=server.id)
     if res:
-        # 同时清理该服务器关联的群绑定记录
-        await MCQQBind.delete_row(server_name=server.server_name)
         logger.info(
-            f"[MCQueQiao] 已删除服务器 '{server.server_name}' (ID={server.id}) 及其关联绑定"
+            f"[MCQueQiao] 已删除服务器 '{server.server_name}' (ID={server.id}) 及其关联白名单、绑定与定时任务"
         )
         await bot.send(f"服务器 [{server.server_name}] 删除成功")
     else:

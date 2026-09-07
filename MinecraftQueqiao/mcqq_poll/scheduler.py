@@ -34,15 +34,18 @@ def parse_schedule_rule(rule_str: str) -> Tuple[str, Optional[Any], str]:
 
     # 1. 尝试判定是否为纯数字时间戳
     if rule.isdigit():
-        ts = int(rule)
-        if ts > 10**11:
-            ts = ts / 1000.0
-        dt = datetime.fromtimestamp(ts, tz=TZ_SHANGHAI)
-        now = datetime.now(tz=TZ_SHANGHAI)
-        if dt <= now:
-            return ("expired", dt, f"已过期 ({dt.strftime('%Y-%m-%d %H:%M:%S')})")
-        trigger = DateTrigger(run_date=dt, timezone=TZ_SHANGHAI)
-        return ("timestamp", trigger, f"一次性推送 ({dt.strftime('%Y-%m-%d %H:%M:%S')})")
+        try:
+            ts = int(rule)
+            if ts > 10**11:
+                ts = ts / 1000.0
+            dt = datetime.fromtimestamp(ts, tz=TZ_SHANGHAI)
+            now = datetime.now(tz=TZ_SHANGHAI)
+            if dt <= now:
+                return ("expired", dt, f"已过期 ({dt.strftime('%Y-%m-%d %H:%M:%S')})")
+            trigger = DateTrigger(run_date=dt, timezone=TZ_SHANGHAI)
+            return ("timestamp", trigger, f"一次性推送 ({dt.strftime('%Y-%m-%d %H:%M:%S')})")
+        except (OverflowError, OSError, ValueError) as e:
+            return ("invalid", None, f"时间戳越界或无效: {rule} ({e})")
 
     # 2. 尝试判定是否为 ISO / 常见格式日期字符串
     for fmt in (
@@ -122,7 +125,10 @@ async def refresh_poll_jobs() -> Tuple[int, int, List[Dict[str, Any]]]:
     Returns:
         (total_enabled: int, registered_count: int, details: List[dict])
     """
-    # 1. 清理已有属于 mcqq_poll 的任务
+    # 1. 优先从数据库读取所有已启用的公告（防读库失败导致已有任务被清空）
+    polls = await MCQQPoll.get_all_enabled()
+
+    # 2. 读库成功后再清理旧有的属于 mcqq_poll 的任务
     existing_jobs = scheduler.get_jobs()
     removed_count = 0
     for job in existing_jobs:
@@ -135,13 +141,15 @@ async def refresh_poll_jobs() -> Tuple[int, int, List[Dict[str, Any]]]:
 
     logger.debug(f"[MCQueQiao] 已清理 {removed_count} 个旧定时公告任务")
 
-    # 2. 从数据库读取所有已启用的公告
-    polls = await MCQQPoll.get_all_enabled()
     registered_count = 0
     details: List[Dict[str, Any]] = []
 
     for poll in polls:
-        rule_type, trigger, desc = parse_schedule_rule(poll.schedule_rule)
+        try:
+            rule_type, trigger, desc = parse_schedule_rule(poll.schedule_rule)
+        except Exception as e:
+            logger.error(f"[MCQueQiao] 解析定时公告 [ID:{poll.id}] 规则异常: {e}")
+            rule_type, trigger, desc = ("invalid", None, f"规则解析异常: {e}")
         job_id = f"mcqq_poll_{poll.id}"
         detail_item: Dict[str, Any] = {
             "id": poll.id,

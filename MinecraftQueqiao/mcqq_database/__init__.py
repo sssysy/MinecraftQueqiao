@@ -267,7 +267,7 @@ class MCQQUserBind(BaseIDModel, table=True):
         result = await session.execute(
             select(cls).where(cls.player_name == player_name)  # type: ignore
         )
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     @classmethod
     @with_session

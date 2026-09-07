@@ -21,10 +21,13 @@ def extract_at_user_ids(ev: Event) -> List[str]:
 def extract_single_target_user(
     ev: Event,
     default_to_sender: bool = True,
+    allow_bare_target: bool = False,
 ) -> Tuple[Optional[str], str, bool]:
     """提取单个目标用户 ID 与剩余文本。
 
     优先提取 @用户；若无 @，则检查文本首个 token 是否为纯数字 QQ 号（支持前导 @）。
+    若 allow_bare_target 为 False，则只有当存在后续参数时（len(tokens) > 1），
+    才将首个数字 token 视为目标用户（防止纯数字 MC 游戏 ID 被误判为 QQ 号）。
 
     Returns:
         (target_user_id, remaining_text, is_for_other)
@@ -41,8 +44,9 @@ def extract_single_target_user(
     if tokens:
         first = tokens[0].strip().lstrip("@")
         if first.isdigit():
-            remaining = tokens[1].strip() if len(tokens) > 1 else ""
-            return first, remaining, True
+            if allow_bare_target or len(tokens) > 1:
+                remaining = tokens[1].strip() if len(tokens) > 1 else ""
+                return first, remaining, True
 
     if default_to_sender:
         return ev.user_id, raw_text, False
