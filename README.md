@@ -1,7 +1,7 @@
 # MinecraftQueqiao
 
 <p align="center">
-  <a href="https://github.com/Genshin-bots/gsuid_core"><img src="ICON.png" height="250" alt="MinecraftQueqiao"></a>
+  <a href="https://github.com/Genshin-bots/gsuid_core"><img src="ICON.png" height="128" alt="MinecraftQueqiao"></a>
 </p>
 <h1 align="center">MinecraftQueqiao</h1>
 <h4 align="center">基于 gsuid_core 和鹊桥的反向 WebSocket 互通插件</h4>
