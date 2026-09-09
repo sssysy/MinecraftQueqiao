@@ -1,4 +1,5 @@
 import asyncio
+import ipaddress
 import re
 from typing import Any, List, Optional
 
@@ -40,6 +41,54 @@ def clean_motd(motd: Any) -> str:
     return " ".join(lines) if lines else "无"
 
 
+def is_server_address(addr: str) -> bool:
+    """检查字符串是否为 Minecraft 服务器地址（域名、IPv4、IPv6，可包含端口）"""
+    addr = addr.strip()
+    if not addr or addr.isdigit():
+        return False
+    if " " in addr:
+        return False
+
+    host = addr
+    port_str: Optional[str] = None
+
+    if addr.startswith("["):
+        m = re.match(r"^\[([a-fA-F0-9:]+)\](?::(\d+))?$", addr)
+        if not m:
+            return False
+        host, port_str = m.group(1), m.group(2)
+    elif ":" in addr:
+        if addr.count(":") == 1:
+            host, port_str = addr.split(":", 1)
+        else:
+            try:
+                ipaddress.IPv6Address(addr)
+                return True
+            except ValueError:
+                return False
+
+    if port_str is not None:
+        if not (port_str.isdigit() and 1 <= int(port_str) <= 65535):
+            return False
+
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        pass
+
+    if host.lower() == "localhost":
+        return True
+
+    labels = host.split(".")
+    if len(labels) >= 2:
+        label_regex = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$")
+        if all(label_regex.match(l) for l in labels) and re.search(r"[a-zA-Z]", labels[-1]):
+            return True
+
+    return False
+
+
 async def query_mc_status(address: str, timeout: float = 3.5) -> Any:
     """使用 mcstatus 异步查询 Minecraft 服务器直连状态"""
     if JavaServer is None:
@@ -57,15 +106,8 @@ async def query_mc_status(address: str, timeout: float = 3.5) -> Any:
         return None
 
 
-async def get_server_status_text(server: MCQQServer) -> str:
-    """通过 mcstatus 原生协议直接获取并格式化服务器状态"""
-    name = server.display_name or server.server_name
-    addr = server.server_address.strip() if server.server_address else ""
-    if not addr:
-        addr = server.server_name.strip()
-
-    status = await query_mc_status(addr) if addr else None
-
+def format_status_lines(name: str, addr: str, status: Any) -> str:
+    """格式化 mcstatus 返回的服务器状态"""
     # 直连查询成功
     if status is not None:
         version_text = clean_motd(status.version.name)
@@ -117,6 +159,21 @@ async def get_server_status_text(server: MCQQServer) -> str:
     return "\n".join(lines)
 
 
+async def get_server_status_text(server: MCQQServer) -> str:
+    """通过 mcstatus 原生协议直接获取并格式化服务器状态"""
+    name = server.display_name or server.server_name
+    addr = server.server_address.strip() if server.server_address else ""
+    if not addr:
+        addr = server.server_name.strip()
+
+    status = await query_mc_status(addr) if addr else None
+    return format_status_lines(name, addr, status)
+
+
+async def get_address_status_text(addr: str) -> str:
+    """通过 mcstatus 原生协议直接获取并格式化指定 IP / 域名的服务器状态"""
+    status = await query_mc_status(addr)
+    return format_status_lines(addr, addr, status)
 
 
 @sv_mcqq_status.on_command(
@@ -128,10 +185,17 @@ async def status_command(bot: Bot, ev: Event) -> None:
 
     if text:
         resolved, err = await resolve_servers(text)
-        if err:
-            await bot.send(err)
-            return
-        servers = resolved
+        if resolved:
+            servers = resolved
+        else:
+            if is_server_address(text):
+                res = await get_address_status_text(text)
+                await bot.send(res)
+                return
+
+            if err:
+                await bot.send(err)
+                return
 
     if servers is not None:
         targets = servers
