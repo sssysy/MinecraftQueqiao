@@ -126,6 +126,59 @@
       }
     ]
   },
+  "传送功能": {
+    "desc": "路径点与传送指令",
+    "data": [
+      {
+        "name": "tp",
+        "desc": "传送到指定路径点",
+        "eg": "tp 家",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "增加tp",
+        "desc": "添加个人路径点",
+        "eg": "增加tp 家 123 45 67",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "增加全局tp",
+        "desc": "添加全局路径点",
+        "eg": "增加全局tp 主城",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "删除tp",
+        "desc": "删除个人路径点",
+        "eg": "删除tp 家",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "删除全局tp",
+        "desc": "删除全局路径点",
+        "eg": "删除全局tp 主城",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "tp列表",
+        "desc": "查看可用路径点列表",
+        "eg": "tp列表",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
   "其他功能": {
     "desc": "RCON管理员权限管理",
     "data": [

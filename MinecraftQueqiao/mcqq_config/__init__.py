@@ -70,6 +70,11 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "屏蔽转发到 MC 服务器执行的指令列表。详情参考 README",
         ["stop"],
     ),
+    "tp_enabled": GsBoolConfig(
+        "是否开启传送指令",
+        "是否启用传送点及传送相关指令",
+        True,
+    ),
 }
 
 CONFIG_PATH = get_res_path() / "MinecraftQueqiao" / "config.json"

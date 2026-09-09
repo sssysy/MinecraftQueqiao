@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
-from sqlmodel import Field, select
+from sqlmodel import Field, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from gsuid_core.utils.database.base_models import BaseIDModel, with_session
@@ -12,6 +12,7 @@ T_MCQQBind = TypeVar("T_MCQQBind", bound="MCQQBind")
 T_MCQQRconWhitelist = TypeVar("T_MCQQRconWhitelist", bound="MCQQRconWhitelist")
 T_MCQQUserBind = TypeVar("T_MCQQUserBind", bound="MCQQUserBind")
 T_MCQQPoll = TypeVar("T_MCQQPoll", bound="MCQQPoll")
+T_MCQQWaypoint = TypeVar("T_MCQQWaypoint", bound="MCQQWaypoint")
 
 exec_list.extend(
     [
@@ -386,5 +387,179 @@ class MCQQPollAdmin(GsAdminModel):
         icon="fa fa-clock-o",
     )  # type: ignore
     model = MCQQPoll
+
+
+class MCQQWaypoint(BaseIDModel, table=True):
+    """MC 路径点列表"""
+
+    __tablename__ = "MCQQWaypoint"
+    __table_args__: Dict[str, Any] = {"extend_existing": True}
+
+    server_name: str = Field(default="", title="ServerName")
+    point_name: str = Field(default="", title="路径点名称")
+    player_name: str = Field(default="", title="创建者")
+    x: float = Field(default=0.0, title="X坐标")
+    y: float = Field(default=0.0, title="Y坐标")
+    z: float = Field(default=0.0, title="Z坐标")
+    dimension: str = Field(default="minecraft:overworld", title="维度")
+    is_global: bool = Field(default=False, title="全局路径点")
+
+    @classmethod
+    @with_session
+    async def get_point(
+        cls: Type[T_MCQQWaypoint],
+        session: AsyncSession,
+        server_name: str,
+        point_name: str,
+        player_name: Optional[str] = None,
+    ) -> Optional["MCQQWaypoint"]:
+        """按服务器名称和地标名获取路径点。
+        若指定了 player_name，优先匹配该玩家的私有路径点；若无私有路径点则匹配全局路径点。
+        """
+        if player_name:
+            result = await session.execute(
+                select(cls).where(
+                    cls.server_name == server_name,  # type: ignore
+                    cls.point_name == point_name,  # type: ignore
+                    cls.player_name == player_name,  # type: ignore
+                    cls.is_global == False,  # type: ignore
+                )
+            )
+            point = result.scalar_one_or_none()
+            if point is not None:
+                return point
+
+        result = await session.execute(
+            select(cls).where(
+                cls.server_name == server_name,  # type: ignore
+                cls.point_name == point_name,  # type: ignore
+                cls.is_global == True,  # type: ignore
+            )
+        )
+        return result.scalars().first()
+
+    @classmethod
+    @with_session
+    async def get_list(
+        cls: Type[T_MCQQWaypoint],
+        session: AsyncSession,
+        server_name: str,
+        player_name: Optional[str] = None,
+    ) -> List["MCQQWaypoint"]:
+        """获取指定服务器的路径点列表（包括全部全局路径点与该玩家个人的私有路径点）"""
+        if player_name:
+            result = await session.execute(
+                select(cls).where(
+                    cls.server_name == server_name,  # type: ignore
+                    or_(cls.is_global == True, cls.player_name == player_name),  # type: ignore
+                )
+            )
+        else:
+            result = await session.execute(
+                select(cls).where(
+                    cls.server_name == server_name,  # type: ignore
+                    cls.is_global == True,  # type: ignore
+                )
+            )
+        return list(result.scalars().all())
+
+    @classmethod
+    @with_session
+    async def add_or_update(
+        cls: Type[T_MCQQWaypoint],
+        session: AsyncSession,
+        server_name: str,
+        point_name: str,
+        player_name: str,
+        x: float,
+        y: float,
+        z: float,
+        dimension: str = "minecraft:overworld",
+        is_global: bool = False,
+    ) -> "MCQQWaypoint":
+        """新增或更新路径点"""
+        if is_global:
+            stmt = select(cls).where(
+                cls.server_name == server_name,  # type: ignore
+                cls.point_name == point_name,  # type: ignore
+                cls.is_global == True,  # type: ignore
+            )
+        else:
+            stmt = select(cls).where(
+                cls.server_name == server_name,  # type: ignore
+                cls.point_name == point_name,  # type: ignore
+                cls.player_name == player_name,  # type: ignore
+                cls.is_global == False,  # type: ignore
+            )
+        result = await session.execute(stmt)
+        point = result.scalar_one_or_none()
+        if point:
+            point.x = x
+            point.y = y
+            point.z = z
+            point.dimension = dimension
+            point.player_name = player_name
+            await session.commit()
+            return point
+        else:
+            new_point = cls(
+                server_name=server_name,
+                point_name=point_name,
+                player_name=player_name,
+                x=x,
+                y=y,
+                z=z,
+                dimension=dimension,
+                is_global=is_global,
+            )
+            session.add(new_point)
+            await session.commit()
+            await session.refresh(new_point)
+            return new_point
+
+    @classmethod
+    @with_session
+    async def delete_point(
+        cls: Type[T_MCQQWaypoint],
+        session: AsyncSession,
+        server_name: str,
+        point_name: str,
+        player_name: Optional[str] = None,
+        is_global: bool = False,
+    ) -> bool:
+        """删除指定路径点"""
+        if is_global:
+            stmt = select(cls).where(
+                cls.server_name == server_name,  # type: ignore
+                cls.point_name == point_name,  # type: ignore
+                cls.is_global == True,  # type: ignore
+            )
+        else:
+            if not player_name:
+                return False
+            stmt = select(cls).where(
+                cls.server_name == server_name,  # type: ignore
+                cls.point_name == point_name,  # type: ignore
+                cls.player_name == player_name,  # type: ignore
+                cls.is_global == False,  # type: ignore
+            )
+        result = await session.execute(stmt)
+        point = result.scalar_one_or_none()
+        if point:
+            await session.delete(point)
+            await session.commit()
+            return True
+        return False
+
+
+@site.register_admin
+class MCQQWaypointAdmin(GsAdminModel):
+    pk_name = "id"
+    page_schema = PageSchema(
+        label="mc路径点列表",
+        icon="fa fa-map-marker",
+    )  # type: ignore
+    model = MCQQWaypoint
+
 
 

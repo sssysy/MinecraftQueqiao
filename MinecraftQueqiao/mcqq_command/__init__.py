@@ -5,5 +5,6 @@ from . import poll
 from . import rcon
 from . import server_add
 from . import status
+from . import tp
 from . import whisper
 from . import ws

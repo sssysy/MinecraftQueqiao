@@ -59,6 +59,21 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
     # 事件消息（message / notice）
     sub_type = data.get("sub_type", "")
 
+    # 检查是否为游戏内传送相关指令，若是则直接执行并拦截转发
+    if sub_type in ("player_chat", "chat", "player_command"):
+        raw_chat_cmd = str(data.get("message", data.get("command", "")))
+        if player_name and raw_chat_cmd:
+            from ..utils.helpers.waypoint_helper import handle_ingame_tp_command
+
+            intercepted = await handle_ingame_tp_command(
+                server_name, player_name, raw_chat_cmd
+            )
+            if intercepted:
+                logger.info(
+                    f"[MCQueQiao] [{server_name}] 玩家 '{player_name}' 执行了游戏内传送指令 '{raw_chat_cmd}'，已拦截不转发至群聊"
+                )
+                return
+
     # 查询服务器配置（外显名）与全局前缀开关
     display_name = None
     server = await MCQQServer.get_by_name(server_name)

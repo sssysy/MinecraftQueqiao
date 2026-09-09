@@ -219,6 +219,19 @@ def _get_token_from_request(websocket: WebSocket) -> str:
     return websocket.query_params.get("token", "").strip()
 
 
+async def _safe_dispatch_message(
+    handler: Callable[[str, str], Awaitable[None]],
+    server_name: str,
+    raw_message: str,
+) -> None:
+    try:
+        await handler(server_name, raw_message)
+    except Exception as e:
+        logger.error(
+            f"[MCQueQiao] [{server_name}] 事件处理器异常: {e}"
+        )
+
+
 async def _handle_queqiao_ws_session(
     websocket: WebSocket, server_name_from_path: Optional[str] = None
 ) -> None:
@@ -289,14 +302,13 @@ async def _handle_queqiao_ws_session(
             except json.JSONDecodeError:
                 pass
 
-            # 分发至事件处理器
+            # 分发至事件处理器（使用 create_task 异步派发，避免阻塞 WebSocket 接收循环导致后续请求死锁）
             if ws_manager.message_handler:
-                try:
-                    await ws_manager.message_handler(server_name, raw_message)
-                except Exception as e:
-                    logger.error(
-                        f"[MCQueQiao] [{server_name}] 事件处理器异常: {e}"
+                asyncio.create_task(
+                    _safe_dispatch_message(
+                        ws_manager.message_handler, server_name, raw_message
                     )
+                )
 
     except WebSocketDisconnect:
         logger.info(f"[MCQueQiao] [{server_name}] 客户端断开连接")
