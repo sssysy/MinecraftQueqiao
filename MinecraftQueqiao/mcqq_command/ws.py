@@ -15,20 +15,23 @@ async def check_ws_status(bot: Bot, ev: Event) -> None:
         await bot.send("当前未配置任何启用的 MC 服务器")
         return
 
-    connected_count = 0
-    lines = ["【Minecraft 鹊桥连接状态】"]
+    online_servers = []
+    offline_servers = []
     for server in servers:
         name = server.display_name or server.server_name
-        is_conn = ws_manager.is_connected(server.server_name)
-        if is_conn:
-            connected_count += 1
-            status_tag = "🟢 在线"
+        if ws_manager.is_connected(server.server_name):
+            online_servers.append(name)
         else:
-            status_tag = "🔴 离线"
+            offline_servers.append(name)
 
-        lines.append(f"• {name} ({server.server_name}): {status_tag}")
+    lines = ["服务器连接状态"]
+    if online_servers:
+        lines.append("[在线]")
+        for s in online_servers:
+            lines.append(f" - {s}")
+    if offline_servers:
+        lines.append("[离线]")
+        for s in offline_servers:
+            lines.append(f" - {s}")
 
-    lines.append(
-        f"\n共 {len(servers)} 个配置服务器，已连接: {connected_count} 个"
-    )
     await bot.send("\n".join(lines))

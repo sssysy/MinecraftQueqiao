@@ -38,10 +38,7 @@ async def resolve_servers(
     if text.isdigit():
         server = await MCQQServer.get_by_id(int(text))
         if server is None:
-            return None, (
-                f"未找到 ID 为 {text} 的服务器，"
-                f"请先在网页控制台确认服务器ID"
-            )
+            return None, f"未找到 ID 为 {text} 的服务器，请确认服务器ID"
         return [server], None
 
     # 2. 内部名优先：命中即返回
@@ -52,7 +49,7 @@ async def resolve_servers(
     # 3. 外显名：可能重复，需检查歧义
     matches = await MCQQServer.get_by_display_name(text)
     if not matches:
-        return None, f"未找到名称为 [{text}] 的服务器，请使用服务器ID重试"
+        return None, f"未找到名称为 {text} 的服务器，请确认服务器名称后重试"
     if len(matches) > 1:
         ids = "/".join(str(s.id) for s in matches)
         return (

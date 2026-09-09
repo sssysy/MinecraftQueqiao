@@ -45,7 +45,7 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
             segments.append(
                 {
                     "kind": "file",
-                    "text": f"[文件 - {name.strip()}]",
+                    "text": f"[文件 | {name.strip()}]",
                     "url": file_url.strip() if file_url else "",
                 }
             )
@@ -85,7 +85,7 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
             for s in segments:
                 if s["kind"] == "text" and is_blacklisted(s["text"], blacklist):
                     logger.debug(
-                        f"[MCQueQiao] 群 {ev.group_id} 消息命中黑名单 '{s['text']}'，跳过转发"
+                        f"[MC·消息转发] 群 {ev.group_id} 消息命中黑名单 '{s['text']}'，跳过转发"
                     )
                     return
 
@@ -93,7 +93,7 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
     binds = await MCQQBind.get_by_group_id(ev.group_id)
     if not binds:
         logger.debug(
-            f"[MCQueQiao] 群 {ev.group_id} 未绑定任何MC服务器，跳过转发"
+            f"[MC·消息转发] 群 {ev.group_id} 未绑定任何MC服务器，跳过转发"
         )
         return
 
@@ -115,13 +115,16 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
         server = await MCQQServer.get_by_name(bind.server_name)
         chatimage_enabled = bool(server and server.chatimage_enabled)
 
-        # 按序组装：群名 + <昵称> + 各片段（图片按 ChatImage 是否开启处理）
+        # 按序组装：<昵称 (群名)> + 各片段（图片按 ChatImage 是否开启处理）
         formatted: list[dict[str, Any]] = []
         if group_name:
-            formatted.append({"text": f"[{group_name}] ", "color": "yellow"})
-        formatted.append(
-            {"text": f"<{sender_nickname}> ", "color": "white"}
-        )
+            formatted.append(
+                {"text": f"<{sender_nickname} ({group_name})> ", "color": "white"}
+            )
+        else:
+            formatted.append(
+                {"text": f"<{sender_nickname}> ", "color": "white"}
+            )
         for s in segments:
             if s["kind"] == "image":
                 url = s.get("url", "")
@@ -152,14 +155,14 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
                             # 兼容 1.20.4 及旧版本
                             "hoverEvent": {
                                 "action": "show_text",
-                                "value": "点击在浏览器中查看图片",
-                                "contents": "点击在浏览器中查看图片",
+                                "value": "点击查看图片",
+                                "contents": "点击查看图片",
                             },
                             # 兼容 1.20.5 / 1.21+ 及新版本
                             "hover_event": {
                                 "action": "show_text",
-                                "value": "点击在浏览器中查看图片",
-                                "contents": "点击在浏览器中查看图片",
+                                "value": "点击查看图片",
+                                "contents": "点击查看图片",
                             },
                         }
                     )
@@ -185,14 +188,14 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
                             # 兼容 1.20.4 及旧版本
                             "hoverEvent": {
                                 "action": "show_text",
-                                "value": "点击在浏览器中查看/下载文件",
-                                "contents": "点击在浏览器中查看/下载文件",
+                                "value": "点击查看文件",
+                                "contents": "点击查看文件",
                             },
                             # 兼容 1.20.5 / 1.21+ 及新版本
                             "hover_event": {
                                 "action": "show_text",
-                                "value": "点击在浏览器中查看/下载文件",
-                                "contents": "点击在浏览器中查看/下载文件",
+                                "value": "点击查看文件",
+                                "contents": "点击查看文件",
                             },
                         }
                     )
@@ -203,12 +206,10 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
 
         success = await send_broadcast(bind.server_name, formatted)
         if success:
-            logger.info(
-                f"[MCQueQiao] 已将群消息转发到服务器 "
-                f"'{bind.server_name}': {formatted}"
+            logger.debug(
+                f"[MC·消息转发] '{formatted}' 已转发至 '{bind.server_name}'"
             )
         else:
             logger.error(
-                f"[MCQueQiao] 转发群消息到服务器 "
-                f"'{bind.server_name}' 失败"
+                f"[MC·消息转发] 消息 '{formatted}' 转发至 '{bind.server_name}' 失败"
             )

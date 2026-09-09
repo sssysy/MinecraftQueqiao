@@ -11,14 +11,14 @@ from .scheduler import (
 @on_core_start
 async def init_mcqq_poll_scheduler() -> None:
     """Bot 启动时自动初始化并加载定时公告任务"""
-    logger.info("[MCQueQiao] 正在初始化定时公告任务调度...")
+    logger.info("[MC·定时公告] 初始化定时公告...")
     try:
         total, registered, _ = await refresh_poll_jobs()
         logger.info(
-            f"[MCQueQiao] 定时公告初始化完成: 共读取 {total} 条启用配置，成功注册 {registered} 个定时任务"
+            f"[MC·定时公告] 定时公告初始化完毕，启用 {total} 个，注册成功 {registered} 个"
         )
     except Exception as e:
-        logger.error(f"[MCQueQiao] 初始化定时公告任务失败: {e}")
+        logger.error(f"[MC·定时公告] 初始化定时公告任务失败: {e}")
 
 
 __all__ = [

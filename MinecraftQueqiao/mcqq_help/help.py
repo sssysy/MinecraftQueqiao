@@ -38,7 +38,7 @@ async def get_help(pm: int):
         plugin_prefix=prefix,
         help_mode="dark",
         banner_bg=Image.open(TEXT_PATH / "banner_bg.jpg"),
-        banner_sub_text="连接QQ与Minecraft的鹊桥",
+        banner_sub_text="我的世界群服互联插件",
         help_bg=Image.open(TEXT_PATH / "bg.jpg"),
         cag_bg=Image.open(TEXT_PATH / "cag_bg.png"),
         item_bg=Image.open(TEXT_PATH / "item.png"),

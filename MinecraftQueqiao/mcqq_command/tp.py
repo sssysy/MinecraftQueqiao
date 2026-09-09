@@ -44,7 +44,7 @@ async def _resolve_active_server(
             servers.append(s)
 
     if not servers:
-        return None, None, "绑定的服务器均处于禁用或未配置状态"
+        return None, None, "无可用服务器"
 
     # 如果仅绑定了一台服务器
     if len(servers) == 1:
@@ -66,7 +66,7 @@ async def _resolve_active_server(
 async def teleport_command(bot: Bot, ev: Event) -> None:
     """传送指令: mctp <路径点名称>"""
     if not mcqq_config.get_config("tp_enabled").data:
-        await bot.send("传送功能当前未开启")
+        await bot.send("未启用传送功能")
         return
 
     if ev.user_type != "group" or not ev.group_id:
@@ -89,12 +89,12 @@ async def teleport_command(bot: Bot, ev: Event) -> None:
         return
 
     if not pos_info:
-        await bot.send(f"未检测到角色 [{player_name}] 在游戏中在线，请进入游戏后再执行传送")
+        await bot.send("玩家离线，无法执行")
         return
 
     point = await MCQQWaypoint.get_point(server.server_name, point_name, player_name)
     if not point:
-        await bot.send(f"未找到路径点 [{point_name}]，可发送 mctp列表 查看可用地标")
+        await bot.send("未找到路径点，请在路径点列表中确认路径点名称")
         return
 
     ok, msg = await execute_teleport(
@@ -125,7 +125,7 @@ async def add_personal_waypoint_command(bot: Bot, ev: Event) -> None:
 
 async def _handle_add_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
     if not mcqq_config.get_config("tp_enabled").data:
-        await bot.send("传送功能当前未开启")
+        await bot.send("未启用传送功能")
         return
 
     if ev.user_type != "group" or not ev.group_id:
@@ -156,11 +156,11 @@ async def _handle_add_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
             player_name=player_name,
         )
         if not is_admin_user:
-            await bot.send("权限不足：仅服务器管理员可以添加全局路径点")
+            await bot.send("您没有添加全局路径点的权限")
             return
 
     if not pos_info:
-        await bot.send(f"未检测到角色 [{player_name}] 在游戏中在线，无法读取位置数据，请先上线")
+        await bot.send("玩家离线，无法获取玩家位置，执行失败")
         return
 
     curr_x, curr_y, curr_z, curr_dim = pos_info
@@ -169,8 +169,9 @@ async def _handle_add_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
         point_name, x, y, z = parse_waypoint_args(
             raw_args, (curr_x, curr_y, curr_z)
         )
-    except ValueError as e:
-        await bot.send(f"参数错误: {e}")
+    except ValueError:
+        cmd_name = "增加全局tp" if is_global else "增加tp"
+        await bot.send(f"参数错误！\n用法：mc{cmd_name} <路径点名称> [x] [y] [z]")
         return
 
     await MCQQWaypoint.add_or_update(
@@ -184,13 +185,18 @@ async def _handle_add_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
         is_global=is_global,
     )
 
-    scope = "全局路径点" if is_global else "个人路径点"
-    server_disp = server.display_name or server.server_name
-    await bot.send(
-        f"[{server_disp}] 成功添加{scope} [{point_name}]：\n"
-        f"• 坐标: ({x}, {y}, {z})\n"
-        f"• 维度: {curr_dim}"
-    )
+    if is_global:
+        await bot.send(
+            f"添加以下全局路径点成功\n"
+            f"名称：{point_name}\n"
+            f"坐标：{x}, {y}, {z}"
+        )
+    else:
+        await bot.send(
+            f"添加以下路径点成功\n"
+            f"名称：{point_name}\n"
+            f"坐标：{x}, {y}, {z}"
+        )
 
 
 @sv_mcqq_tp.on_command("删除全局tp")
@@ -207,7 +213,7 @@ async def delete_personal_waypoint_command(bot: Bot, ev: Event) -> None:
 
 async def _handle_delete_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
     if not mcqq_config.get_config("tp_enabled").data:
-        await bot.send("传送功能当前未开启")
+        await bot.send("未启用传送功能")
         return
 
     if ev.user_type != "group" or not ev.group_id:
@@ -237,11 +243,11 @@ async def _handle_delete_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
             player_name=player_name,
         )
         if not is_admin_user:
-            await bot.send("权限不足：仅服务器管理员可以删除全局路径点")
+            await bot.send("您没有删除全局路径点的权限")
             return
 
     if not pos_info:
-        await bot.send(f"未检测到角色 [{player_name}] 在游戏中在线，请进入游戏后再执行该操作")
+        await bot.send("玩家离线，无法删除玩家路径点")
         return
 
     ok = await MCQQWaypoint.delete_point(
@@ -251,19 +257,17 @@ async def _handle_delete_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
         is_global=is_global,
     )
 
-    scope = "全局路径点" if is_global else "个人路径点"
-    server_disp = server.display_name or server.server_name
     if ok:
-        await bot.send(f"[{server_disp}] 成功删除{scope} [{point_name}]")
+        await bot.send("删除成功")
     else:
-        await bot.send(f"[{server_disp}] 删除失败：未找到对应的{scope} [{point_name}]")
+        await bot.send(f"删除失败：未找到路径点 {point_name}")
 
 
 @sv_mcqq_tp.on_command(("tp列表", "传送列表", "路径点列表"))
 async def list_waypoint_command(bot: Bot, ev: Event) -> None:
     """查看路径点列表: mctp列表"""
     if not mcqq_config.get_config("tp_enabled").data:
-        await bot.send("传送功能当前未开启")
+        await bot.send("未启用传送功能")
         return
 
     if ev.user_type != "group" or not ev.group_id:
@@ -281,7 +285,7 @@ async def list_waypoint_command(bot: Bot, ev: Event) -> None:
         return
 
     if not pos_info:
-        await bot.send(f"未检测到角色 [{player_name}] 在游戏中在线，请进入游戏后再查看列表")
+        await bot.send("玩家离线，无法获取路径点列表")
         return
 
     points = await MCQQWaypoint.get_list(
@@ -290,7 +294,7 @@ async def list_waypoint_command(bot: Bot, ev: Event) -> None:
     )
 
     if not points:
-        await bot.send("[MC 传送点列表]\n暂无可用的传送点")
+        await bot.send("路径点列表\n - 无")
         return
 
     global_pts = [p for p in points if p.is_global]

@@ -27,7 +27,7 @@ async def get_player_pos_and_dimension(
         server_name, f"data get entity {player_name} Pos"
     )
     if not ok or not out:
-        logger.debug(f"[MCQueQiao] [{server_name}] 获取玩家 {player_name} Pos 失败: {out}")
+        logger.debug(f"[MC·地标传送] [{server_name}] 获取玩家 {player_name} Pos 失败: {out}")
         return None
 
     out_str = str(out)
@@ -37,7 +37,7 @@ async def get_player_pos_and_dimension(
     match = POS_PATTERN.search(out_str)
     if not match:
         logger.warning(
-            f"[MCQueQiao] [{server_name}] 无法解析玩家 {player_name} 坐标输出: {out_str}"
+            f"[MC·地标传送] [{server_name}] 无法解析玩家 {player_name} 坐标输出: {out_str}"
         )
         return None
 
@@ -135,7 +135,7 @@ async def execute_teleport(
     ok, out = await send_rcon_command(server_name, cmd)
     if not ok:
         logger.warning(
-            f"[MCQueQiao] [{server_name}] 传送玩家 {player_name} 失败: {out}"
+            f"[MC·地标传送] [{server_name}] 传送玩家 {player_name} 失败: {out}"
         )
         return False, f"传送失败: {out}"
 
@@ -230,7 +230,7 @@ async def handle_ingame_tp_command(
             is_admin_user = await is_admin(server_name, player_name=player_name)
             if not is_admin_user:
                 await send_player_tellraw(
-                    server_name, player_name, "[传送] 权限不足：仅服务器管理员可添加全局路径点", "red"
+                    server_name, player_name, "您没有添加全局路径点的权限", "red"
                 )
                 return True
 
@@ -290,7 +290,7 @@ async def handle_ingame_tp_command(
             await send_player_tellraw(
                 server_name,
                 player_name,
-                f"[传送] 成功添加个人路径点 [{pt_name}] ({x}, {y}, {z})",
+                f"添加以下路径点成功\n名称：{pt_name}\n坐标：{x}, {y}, {z}",
                 "green",
             )
             return True
@@ -309,18 +309,18 @@ async def handle_ingame_tp_command(
             is_admin_user = await is_admin(server_name, player_name=player_name)
             if not is_admin_user:
                 await send_player_tellraw(
-                    server_name, player_name, "[传送] 权限不足：仅服务器管理员可删除全局路径点", "red"
+                    server_name, player_name, "您没有删除全局路径点的权限", "red"
                 )
                 return True
 
             ok = await MCQQWaypoint.delete_point(server_name, pt_name, player_name, is_global=True)
             if ok:
                 await send_player_tellraw(
-                    server_name, player_name, f"[传送] 成功删除全局路径点 [{pt_name}]", "green"
+                    server_name, player_name, "删除成功", "green"
                 )
             else:
                 await send_player_tellraw(
-                    server_name, player_name, f"[传送] 删除失败：未找到全局路径点 [{pt_name}]", "red"
+                    server_name, player_name, f"删除失败：未找到路径点 {pt_name}", "red"
                 )
             return True
 
@@ -338,11 +338,11 @@ async def handle_ingame_tp_command(
             ok = await MCQQWaypoint.delete_point(server_name, pt_name, player_name, is_global=False)
             if ok:
                 await send_player_tellraw(
-                    server_name, player_name, f"[传送] 成功删除个人路径点 [{pt_name}]", "green"
+                    server_name, player_name, "删除成功", "green"
                 )
             else:
                 await send_player_tellraw(
-                    server_name, player_name, f"[传送] 删除失败：未找到个人路径点 [{pt_name}]", "red"
+                    server_name, player_name, f"删除失败：未找到路径点 {pt_name}", "red"
                 )
             return True
 

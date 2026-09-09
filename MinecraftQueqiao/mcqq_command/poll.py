@@ -14,22 +14,29 @@ async def refresh_poll_command(bot: Bot, ev: Event) -> None:
     try:
         total_enabled, registered_count, details = await refresh_poll_jobs()
     except Exception as e:
-        logger.error(f"[MCQueQiao] 刷新定时公告失败: {e}")
+        logger.error(f"[MC·定时公告] 刷新定时公告失败: {e}")
         await bot.send(f"刷新定时公告失败: {e}")
         return
 
-    lines = [
-        "[Minecraft 定时公告]",
-        f"启用：{total_enabled} 个",
-        f"注册成功：{registered_count} 个",
-    ]
-
     failed_items = [item for item in details if item.get("status") != "registered"]
-    if failed_items:
-        lines.append("失败ID：")
+    if not failed_items:
+        lines = [
+            "定时公告刷新",
+            f" - 启用任务：{total_enabled} 个",
+            f"注册成功：{registered_count} 个",
+        ]
+    else:
+        failed_count = len(failed_items)
+        lines = [
+            "定时公告刷新",
+            f" - 启用任务：{total_enabled} 个",
+            f" - 注册成功：{registered_count} 个",
+            f"注册失败：{failed_count} 个",
+            " - 失败列表：",
+        ]
         for idx, item in enumerate(failed_items, 1):
             reason = item.get("desc", "未知原因")
-            lines.append(f"{idx}. {item['id']}({reason})")
+            lines.append(f"  - {idx} | {reason}")
 
     await bot.send("\n".join(lines))
 

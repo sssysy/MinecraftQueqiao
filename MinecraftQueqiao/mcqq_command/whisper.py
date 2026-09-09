@@ -39,8 +39,8 @@ async def _parse_whisper_args(
             return (
                 None,
                 None,
-                "用法：mc私聊 <@用户 / QQ号 / 游戏ID> <私聊内容>\n"
-                "例如：mc私聊 @张三 你好呀 / mc私聊 12345678 快上线 / mc私聊 Steve 收到请回复",
+                "用法：mc私聊 <游戏名> <私聊内容>\n"
+                "例如：mc私聊 @张三 你好呀",
             )
         first_token = parts[0].strip().lstrip("@")
         content = parts[1].strip()
@@ -63,8 +63,7 @@ async def _parse_whisper_args(
         return (
             None,
             None,
-            f"目标用户 {target_uid} 尚未绑定 MC 游戏角色，无法发送私聊。\n"
-            f"可使用 mc绑定 <游戏ID> 进行绑定，或直接输入对方游戏名（如 mc私聊 Steve 内容）。",
+            f"目标用户 {target_uid} 尚未绑定 MC 游戏角色，无法发送私聊。请直接使用游戏内名称",
         )
 
     return user_bind.player_name, content, None
@@ -155,11 +154,11 @@ async def whisper_command(bot: Bot, ev: Event) -> None:
                 kw in out_str
                 for kw in ("No player was found", "未找到玩家", "找不到玩家", "Player not found")
             ):
-                results.append(f"[{server_display}] 未找到玩家 {player_name}（玩家可能不在线）")
+                results.append(f"未找到玩家 {player_name}")
             else:
-                results.append(f"[{server_display}] 私聊已发送给玩家 {player_name}")
+                results.append("私聊发送成功")
                 logger.info(
-                    f"[MCQueQiao] [{server.server_name}] 已向玩家 {player_name} 发送私聊: "
+                    f"[MC·私聊功能] [{server.server_name}] 已向玩家 {player_name} 发送私聊: "
                     f"<{sender_name}(私聊)> {content}"
                 )
         else:

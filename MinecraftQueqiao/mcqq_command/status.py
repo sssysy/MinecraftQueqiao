@@ -92,7 +92,7 @@ def is_server_address(addr: str) -> bool:
 async def query_mc_status(address: str, timeout: float = 3.5) -> Any:
     """使用 mcstatus 异步查询 Minecraft 服务器直连状态"""
     if JavaServer is None:
-        logger.warning("[MCQueQiao] 未安装 mcstatus 库，无法进行直连状态查询")
+        logger.warning("[MC·服务器状态] 未安装 mcstatus 库，无法进行直连状态查询")
         return None
 
     try:
@@ -102,60 +102,55 @@ async def query_mc_status(address: str, timeout: float = 3.5) -> Any:
         status = await asyncio.wait_for(server.async_status(), timeout=timeout)
         return status
     except Exception as e:
-        logger.debug(f"[MCQueQiao] mcstatus 查询 [{address}] 失败: {e}")
+        logger.debug(f"[MC·服务器状态] mcstatus 查询 [{address}] 失败: {e}")
         return None
 
 
 def format_status_lines(name: str, addr: str, status: Any) -> str:
     """格式化 mcstatus 返回的服务器状态"""
+    lines = ["服务器状态"]
+    if addr and addr != "未配置":
+        lines.append(f"地址：{addr}")
+
     # 直连查询成功
     if status is not None:
+        lines.append("状态：在线")
+
+        # 延迟信息
+        latency_val = getattr(status, "latency", None)
+        if latency_val is not None:
+            lines.append(f"延迟：{round(latency_val, 1)}ms")
+
         version_text = clean_motd(status.version.name)
+        if version_text and version_text != "无":
+            lines.append(f"版本：{version_text}")
+
         raw_desc = getattr(status, "description", None) or getattr(
             status, "motd", None
         )
-        desc_text = clean_motd(raw_desc) or "无"
+        desc_text = clean_motd(raw_desc)
+        if desc_text and desc_text != "无":
+            lines.append(f"简介：{desc_text}")
+
         online_cnt = status.players.online
         max_cnt = status.players.max
+        lines.append(f"人数：{online_cnt} / {max_cnt}")
 
         # 从协议原生 players.sample 提取在线玩家列表并过滤假人
-        if status.players.sample:
+        if online_cnt > 0 and status.players.sample:
             fake_filter = mcqq_config.get_config("fake_player_filter").data
             player_names = [
                 p.name
                 for p in status.players.sample
                 if p and p.name and not is_fake_player(p.name, fake_filter)
             ]
-            player_list_str = ", ".join(player_names) if player_names else "无"
-        elif online_cnt == 0:
-            player_list_str = "无"
-        else:
-            player_list_str = "（已隐藏）"
+            if player_names:
+                lines.append(f"列表：{', '.join(player_names)}")
 
-        # 延迟信息
-        latency_val = getattr(status, "latency", None)
-        latency_text = (
-            f"{round(latency_val, 1)}ms" if latency_val is not None else "未知"
-        )
-
-        lines = [
-            f"[{name}] 服务器状态：",
-            f"服务器地址：{addr}",
-            "在线状态：在线",
-            f"延迟：{latency_text}",
-            f"游戏版本：{version_text}",
-            f"服务器简介：{desc_text}",
-            f"玩家数量：{online_cnt} / {max_cnt}",
-            f"玩家列表：{player_list_str}",
-        ]
         return "\n".join(lines)
 
     # 直连失败/离线
-    lines = [
-        f"[{name}] 服务器状态：",
-        f"服务器地址：{addr if addr else '未配置'}",
-        "在线状态：离线",
-    ]
+    lines.append("状态：离线")
     return "\n".join(lines)
 
 
@@ -203,7 +198,7 @@ async def status_command(bot: Bot, ev: Event) -> None:
         binds = await MCQQBind.get_by_group_id(ev.group_id)
         if not binds:
             await bot.send(
-                "当前群未绑定任何服务器，请指定服务器（例如：mc查看 生存服）或先执行 mc群服绑定"
+                "当前群未绑定任何服务器，请手动输入服务器 IP 查询"
             )
             return
         targets = []

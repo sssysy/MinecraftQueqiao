@@ -94,7 +94,7 @@ async def send_poll_message(poll_id: int, server_name: str, content: str) -> boo
         target_servers = [server_name]
 
     if not target_servers:
-        logger.warning(f"[MCQueQiao] 定时公告 [ID:{poll_id}] 未找到可推送的目标服务器")
+        logger.warning(f"[MC·定时公告] 定时公告 [ID:{poll_id}] 未找到可推送的目标服务器")
         return False
 
     success = True
@@ -103,16 +103,16 @@ async def send_poll_message(poll_id: int, server_name: str, content: str) -> boo
             ok = await send_broadcast(s_name, formatted_msg)
             if ok:
                 logger.info(
-                    f"[MCQueQiao] 定时公告 [ID:{poll_id}] 成功推送至服务器 [{s_name}]"
+                    f"[MC·定时公告] 定时公告 [ID:{poll_id}] 推送成功"
                 )
             else:
                 logger.warning(
-                    f"[MCQueQiao] 定时公告 [ID:{poll_id}] 推送至服务器 [{s_name}] 失败（服务器未连接或离线）"
+                    f"[MC·定时公告] 定时公告 [ID:{poll_id}] 推送失败：服务器未连接或离线"
                 )
                 success = False
         except Exception as e:
             logger.error(
-                f"[MCQueQiao] 定时公告 [ID:{poll_id}] 推送至 [{s_name}] 异常: {e}"
+                f"[MC·定时公告] 定时公告 [ID:{poll_id}] 推送失败：{e}"
             )
             success = False
 
@@ -137,9 +137,9 @@ async def refresh_poll_jobs() -> Tuple[int, int, List[Dict[str, Any]]]:
                 scheduler.remove_job(job.id)
                 removed_count += 1
             except Exception as e:
-                logger.error(f"[MCQueQiao] 移除旧定时任务 {job.id} 失败: {e}")
+                logger.error(f"[MC·定时公告] 移除旧定时任务 {job.id} 失败: {e}")
 
-    logger.debug(f"[MCQueQiao] 已清理 {removed_count} 个旧定时公告任务")
+    logger.debug(f"[MC·定时公告] 已清理 {removed_count} 个旧定时公告任务")
 
     registered_count = 0
     details: List[Dict[str, Any]] = []
@@ -148,7 +148,7 @@ async def refresh_poll_jobs() -> Tuple[int, int, List[Dict[str, Any]]]:
         try:
             rule_type, trigger, desc = parse_schedule_rule(poll.schedule_rule)
         except Exception as e:
-            logger.error(f"[MCQueQiao] 解析定时公告 [ID:{poll.id}] 规则异常: {e}")
+            logger.error(f"[MC·定时公告] 解析定时公告 [ID:{poll.id}] 规则异常: {e}")
             rule_type, trigger, desc = ("invalid", None, f"规则解析异常: {e}")
         job_id = f"mcqq_poll_{poll.id}"
         detail_item: Dict[str, Any] = {
@@ -180,15 +180,15 @@ async def refresh_poll_jobs() -> Tuple[int, int, List[Dict[str, Any]]]:
                         "%Y-%m-%d %H:%M:%S"
                     )
                 logger.info(
-                    f"[MCQueQiao] 成功注册定时公告 [ID:{poll.id}] ({poll.server_name}) - {desc} - 下次运行: {detail_item['next_run_time']}"
+                    f"[MC·定时公告] 定时公告 [ID:{poll.id}] 注册成功，下次运行时间：{detail_item['next_run_time']}"
                 )
             except Exception as e:
                 detail_item["status"] = f"error: {e}"
                 detail_item["desc"] = f"注册失败: {e}"
-                logger.error(f"[MCQueQiao] 注册定时公告 [ID:{poll.id}] 失败: {e}")
+                logger.error(f"[MC·定时公告] 注册定时公告 [ID:{poll.id}] 失败: {e}")
         else:
             logger.info(
-                f"[MCQueQiao] 定时公告 [ID:{poll.id}] 未注册: {desc}"
+                f"[MC·定时公告] 定时公告 [ID:{poll.id}] 未注册: {desc}"
             )
 
         details.append(detail_item)

@@ -77,7 +77,7 @@ class WSManager:
                 future.set_exception(ConnectionError(reason))
         if to_cancel:
             logger.debug(
-                f"[MCQueQiao] [{server_name}] 已取消 {len(to_cancel)} 个等待中的请求: {reason}"
+                f"[MC·Websocket] [{server_name}] 已取消 {len(to_cancel)} 个等待中的请求: {reason}"
             )
 
     async def register_connection(
@@ -93,7 +93,7 @@ class WSManager:
             self._cancel_pending_requests(server_name, "连接已被新连接替换")
         self.active_connections[server_name] = websocket
         logger.info(
-            f"[MCQueQiao] [{server_name}] 鹊桥反向 WebSocket 已连接 (已在线: {self.get_connected_servers()})"
+            f"[MC·Websocket] [{server_name}] ws建立连接 "
         )
 
     async def remove_connection(
@@ -104,14 +104,14 @@ class WSManager:
         if websocket is None or current_ws is websocket:
             self.active_connections.pop(server_name, None)
             self._cancel_pending_requests(server_name, "服务器连接已断开")
-            logger.info(f"[MCQueQiao] [{server_name}] 鹊桥反向 WebSocket 已断开")
+            logger.info(f"[MC·Websocket] [{server_name}] ws断开连接")
 
     async def send_json(self, server_name: str, message: dict) -> bool:
         """向指定服务器发送 JSON 消息包"""
         ws = self.active_connections.get(server_name)
         if not ws or ws.application_state != WebSocketState.CONNECTED:
             logger.warning(
-                f"[MCQueQiao] [{server_name}] 无法发送消息：WebSocket 未连接"
+                f"[MC·Websocket] [{server_name}] 无法发送消息：WebSocket 未连接"
             )
             return False
 
@@ -121,12 +121,12 @@ class WSManager:
             async with lock:
                 await ws.send_text(raw_text)
             logger.debug(
-                f"[MCQueQiao] [{server_name}] 已发送 WS 消息: api={message.get('api')}"
+                f"[MC·Websocket] [{server_name}] 已发送 WS 消息: api={message.get('api')}"
             )
             return True
         except Exception as e:
             logger.error(
-                f"[MCQueQiao] [{server_name}] 发送 WS 消息失败: {e}"
+                f"[MC·Websocket] [{server_name}] 发送 WS 消息失败: {e}"
             )
             return False
 
@@ -169,17 +169,17 @@ class WSManager:
             return False, response.get("message", "执行失败")
         except asyncio.TimeoutError:
             logger.warning(
-                f"[MCQueQiao] [{server_name}] API 请求超时 ({timeout}s): api={api}, echo={echo}"
+                f"[MC·Websocket] [{server_name}] API 请求超时 ({timeout}s): api={api}, echo={echo}"
             )
             return False, "指令执行超时"
         except ConnectionError as e:
             logger.warning(
-                f"[MCQueQiao] [{server_name}] API 请求连接中断: {e}"
+                f"[MC·Websocket] [{server_name}] API 请求连接中断: {e}"
             )
             return False, "服务器连接已断开"
         except Exception as e:
             logger.error(
-                f"[MCQueQiao] [{server_name}] API 请求异常: {e}"
+                f"[MC·Websocket] [{server_name}] API 请求异常: {e}"
             )
             return False, f"请求异常: {e}"
         finally:
@@ -228,7 +228,7 @@ async def _safe_dispatch_message(
         await handler(server_name, raw_message)
     except Exception as e:
         logger.error(
-            f"[MCQueQiao] [{server_name}] 事件处理器异常: {e}"
+            f"[MC·Websocket] [{server_name}] 事件处理器异常: {e}"
         )
 
 
@@ -241,7 +241,7 @@ async def _handle_queqiao_ws_session(
 
     if not server_name:
         logger.warning(
-            f"[MCQueQiao] 拒绝反向 WS 连接：未指定 server_name (路径或 Header 均为空)"
+            "[MC·Websocket] ws连接拒绝：未指定ServerName"
         )
         await websocket.close(code=1008, reason="Missing server_name")
         return
@@ -250,7 +250,7 @@ async def _handle_queqiao_ws_session(
     origin = websocket.headers.get("x-client-origin") or ""
     if origin.lower() == "gsuid_core":
         logger.warning(
-            f"[MCQueQiao] 拒绝来自 gsuid_core 自身的回环反向连接: server_name={server_name}"
+            "[MC·Websocket] 拒绝连接：gsuid_core"
         )
         await websocket.close(code=1008, reason="Origin cannot be gsuid_core")
         return
@@ -259,14 +259,14 @@ async def _handle_queqiao_ws_session(
     server = await MCQQServer.get_by_name(server_name)
     if server is None:
         logger.warning(
-            f"[MCQueQiao] 拒绝反向 WS 连接：未知服务器 '{server_name}'（请先在控制台添加）"
+            f"[MC·Websocket] ws连接拒绝：位置服务器 {server_name}，请先添加服务器再连接"
         )
         await websocket.close(code=1008, reason="Unknown server_name")
         return
 
     if not server.enabled:
         logger.warning(
-            f"[MCQueQiao] 拒绝反向 WS 连接：服务器 '{server_name}' 当前处于禁用状态"
+            "[MC·Websocket] ws连接拒绝：服务器被禁用"
         )
         await websocket.close(code=1008, reason="Server is disabled")
         return
@@ -276,7 +276,7 @@ async def _handle_queqiao_ws_session(
         client_token = _get_token_from_request(websocket)
         if client_token != server.access_token:
             logger.warning(
-                f"[MCQueQiao] 拒绝反向 WS 连接：服务器 '{server_name}' 鉴权失败"
+                f"[MC·Websocket] ws连接拒绝：{server_name} 鉴权失败"
             )
             await websocket.close(code=1008, reason="Invalid access token")
             return
@@ -311,9 +311,9 @@ async def _handle_queqiao_ws_session(
                 )
 
     except WebSocketDisconnect:
-        logger.info(f"[MCQueQiao] [{server_name}] 客户端断开连接")
+        logger.info(f"[MC·Websocket] [{server_name}] 客户端断开连接")
     except Exception as e:
-        logger.error(f"[MCQueQiao] [{server_name}] WebSocket 连接异常: {e}")
+        logger.error(f"[MC·Websocket] [{server_name}] WebSocket 连接异常: {e}")
     finally:
         await ws_manager.remove_connection(server_name, websocket)
 

@@ -20,8 +20,8 @@ async def init_mcqq_connections() -> None:
     """初始化鹊桥 WebSocket 事件分发器"""
     ws_manager.set_message_handler(handle_ws_message)
     logger.info(
-        "[MCQueQiao] 鹊桥反向 WebSocket 服务端已就绪 "
-        "(端点: /minecraft/ws/{server_name} 或 /minecraft/ws)"
+        "[MC·Websocket] 鹊桥反向 WebSocket 服务端已就绪 "
+        "(端点: /minecraft/ws/{server_name})"
     )
 
 
@@ -128,9 +128,9 @@ async def send_rcon_command(
     blacklist = mcqq_config.get_config("command_blacklist").data
     if is_command_blacklisted(command, blacklist):
         logger.warning(
-            f"[MCQueQiao] [{server_name}] 指令 '{command}' 命中黑名单，跳过传递"
+            f"[MC·RCON] [{server_name}] 指令 '{command}' 命中黑名单，跳过传递"
         )
-        return False, "黑名单指令，跳过传递"
+        return False, "黑名单指令！"
 
     if timeout is None:
         try:

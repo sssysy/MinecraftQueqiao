@@ -24,8 +24,7 @@ async def bind_server(bot: Bot, ev: Event) -> None:
         return
     if servers is None or len(servers) != 1:
         await bot.send(
-            "请指定一个服务器："
-            "mc群服绑定<服务器>，例如 mc群服绑定香草纪元"
+            "请指定一个服务器\n用法：mc群服绑定<服务器>\n例如：mc群服绑定香草纪元"
         )
         return
     server = servers[0]
@@ -65,9 +64,7 @@ async def bind_server(bot: Bot, ev: Event) -> None:
             f"'{server.server_name}' (ID={server.id})"
         )
 
-    await bot.send(
-        f"绑定成功：已将当前群绑定至服务器 {server.server_name}"
-    )
+    await bot.send("绑定成功！")
 
 
 @sv_mcqq_bind.on_command("群服解绑")
@@ -79,7 +76,7 @@ async def unbind_server(bot: Bot, ev: Event) -> None:
 
     server_id_text = ev.text.strip()
     if not server_id_text:
-        await bot.send("格式错误，请使用 mc群服解绑<服务器>，例如 mc群服解绑香草纪元")
+        await bot.send("格式错误！\n用法：mc群服解绑<服务器>\n例如：mc群服解绑香草纪元")
         return
 
     servers, err = await resolve_servers(server_id_text)
@@ -88,8 +85,7 @@ async def unbind_server(bot: Bot, ev: Event) -> None:
         return
     if servers is None or len(servers) != 1:
         await bot.send(
-            "请指定一个服务器："
-            "mc群服解绑<服务器>，例如 mc群服解绑香草纪元"
+            "请指定一个服务器\n用法：mc群服解绑<服务器>\n例如：mc群服解绑香草纪元"
         )
         return
     server = servers[0]
@@ -99,7 +95,7 @@ async def unbind_server(bot: Bot, ev: Event) -> None:
     )
     if not existing:
         await bot.send(
-            f"当前群未绑定服务器 {server.server_name}，无需解绑"
+            f"未找到服务器 {server.server_name}"
         )
         return
 
@@ -111,8 +107,6 @@ async def unbind_server(bot: Bot, ev: Event) -> None:
             f"[MCQueQiao] 群 {ev.group_id} 已解绑服务器 "
             f"'{server.server_name}' (ID={server.id})"
         )
-        await bot.send(
-            f"解绑成功：已将当前群与服务器 {server.server_name} 解除绑定"
-        )
+        await bot.send("解绑成功！")
     else:
-        await bot.send("解绑失败，请稍后重试")
+        await bot.send("解绑失败，请检查控制台")

@@ -51,8 +51,7 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
         fake_filter = mcqq_config.get_config("fake_player_filter").data
         if is_fake_player(str(player_name), fake_filter):
             logger.debug(
-                f"[MCQueQiao] [{server_name}] 玩家 '{player_name}' "
-                f"命中假人过滤规则，跳过事件分发"
+                f"[MC·转发过滤] '{player_name}' 位于假人列表中，跳过推送"
             )
             return
 
@@ -70,7 +69,7 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
             )
             if intercepted:
                 logger.info(
-                    f"[MCQueQiao] [{server_name}] 玩家 '{player_name}' 执行了游戏内传送指令 '{raw_chat_cmd}'，已拦截不转发至群聊"
+                    f"[MC·地标传送] [{server_name}] 玩家 '{player_name}' 执行了游戏内传送指令 '{raw_chat_cmd}'"
                 )
                 return
 
@@ -110,16 +109,14 @@ async def ws_event_handler(server_name: str, raw_message: str) -> None:
             matched, _ = match_and_trim_prefix(raw_message, whitelist)
             if not matched:
                 logger.debug(
-                    f"[MCQueQiao] [{server_name}] 玩家聊天内容未匹配白名单 "
-                    f"{whitelist}，跳过推送"
+                    f"[MC·转发过滤] '{raw_message}' 未在白名单内，跳过推送"
                 )
                 return
         else:
             # 白名单为空：黑名单生效
             if is_blacklisted(raw_message, blacklist):
                 logger.debug(
-                    f"[MCQueQiao] [{server_name}] 玩家聊天内容匹配黑名单 "
-                    f"{blacklist}，跳过推送"
+                    f"[MC·转发过滤] '{raw_message}' 触发黑名单，跳过推送"
                 )
                 return
 
@@ -173,7 +170,10 @@ def format_event_message(
             matched, new_message = match_and_trim_prefix(message, chat_whitelist)
             if matched:
                 message = new_message
-        return f"{prefix}<{player_name}> {message}"
+        if show_server_name:
+            return f"<{player_name} ({server_name})> {message}"
+        else:
+            return f"<{player_name}> {message}"
 
     if sub_type in ("player_death", "death"):
         death = data.get("death", {})
@@ -201,13 +201,16 @@ def format_event_message(
             # v0.4.0 及以下使用 text
             if not achievement_text:
                 achievement_text = achievement.get("text", "") or ""
-        if not achievement_text:
-            achievement_text = f"{player_name} 获得了成就"
-        return f"{prefix}{achievement_text}"
+        if achievement_text:
+            if not achievement_text.startswith("["):
+                achievement_text = f"[{achievement_text}]"
+        else:
+            achievement_text = "[成就]"
+        return f"{prefix}{player_name} 获得成就 {achievement_text}"
 
     if sub_type in ("player_command",):
         command = data.get("command", data.get("message", ""))
-        return f"{prefix}<{player_name}> 执行了命令: {command}"
+        return f"{prefix}{player_name} 执行: {command}"
 
     return None
 
@@ -216,13 +219,13 @@ async def push_to_qq_group(server_name: str, text: str) -> None:
     """消息推送到服务器绑定的群"""
     binds = await MCQQBind.get_by_server_name(server_name)
     if not binds:
-        logger.debug(
-            f"[MCQueQiao] 服务器 '{server_name}' 未绑定任何群组，跳过推送"
+        logger.warning(
+            f"[MC·消息转发] '{server_name}' 未绑定群聊，消息推送失败"
         )
         return
 
     if not gss.active_bot:
-        logger.warning("[MCQueQiao] 没有活跃的 Bot 连接，无法推送消息")
+        logger.warning("[MC·消息转发] 无连接中 Bot，消息推送失败")
         return
 
     for bind in binds:

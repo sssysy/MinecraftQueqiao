@@ -83,7 +83,7 @@ async def search_mcmod(keyword: str, max_results: int = 10) -> str:
     """在 MC 百科检索模组并返回格式化文本"""
     clean_kw = keyword.strip()
     if not clean_kw:
-        return "请输入要搜索的模组名称，例如：mcmod搜索 jei"
+        return "请输入要搜索的模组名称\n例如：mcmod搜索 jei"
 
     search_url = f"{SEARCH_BASE_URL}?key={quote_plus(clean_kw)}"
 
@@ -98,19 +98,19 @@ async def search_mcmod(keyword: str, max_results: int = 10) -> str:
             html_text = resp.text
             final_url = str(resp.url)
     except Exception as e:
-        logger.error(f"[MCQueQiao] MC百科搜索请求失败: {e}")
-        return f"遭遇验证码，请手动访问：{search_url}"
+        logger.error(f"[MC·MCMOD] MC百科搜索请求失败: {e}")
+        return f"获取页面失败(验证码等)\n请手动访问：{search_url}"
 
     soup = BeautifulSoup(html_text, "html.parser")
     is_captcha, results = parse_mcmod_page(soup, status_code, final_url)
 
     # 验证码/拦截处理
     if is_captcha:
-        return f"遭遇验证码，请手动访问：{search_url}"
+        return f"获取页面失败(验证码等)\n请手动访问：{search_url}"
 
     # 无结果处理
     if not results:
-        return f"未搜索到关于“{clean_kw}”的模组结果，请更换关键词重试。"
+        return f"未搜索到关于 ‘{clean_kw}’ 的搜索结果，请更换关键词重试。"
 
     # 格式化输出
     display_results = results[:max_results]

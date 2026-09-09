@@ -25,12 +25,12 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
         target_uid = ev.user_id
 
     if is_for_other and ev.user_pm > 3:
-        await bot.send("权限不足：只有管理员可以为其他用户绑定 MC 角色")
+        await bot.send("无操作权限！", at=True)
         return
 
     player_name = player_name.strip()
     if not player_name:
-        await bot.send("用法：mc绑定 <游戏ID> 或 mc绑定 <@用户/QQ号> <游戏ID>")
+        await bot.send("用法：mc绑定 <游戏名>\n如：mc绑定 Notch")
         return
 
     # 查重：阻止同一 MC 角色名绑定到多个用户
@@ -50,12 +50,12 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
             },
         )
         logger.info(
-            f"[MCQueQiao] 用户 {target_uid} 的 MC 绑定已更新为: {player_name} (操作人: {ev.user_id})"
+            f"[MC·游戏绑定] 绑定更新：{target_uid} <-> {player_name}"
         )
         if is_for_other:
-            await bot.send(f"绑定更新成功：已将用户 {target_uid} 的 MC 角色更新为 {player_name}")
+            await bot.send(f"更新绑定成功：{target_uid} <-> {player_name}")
         else:
-            await bot.send(f"绑定更新成功：已将您的 MC 角色更新为 {player_name}")
+            await bot.send("更新绑定成功！")
     else:
         await MCQQUserBind.full_insert_data(
             user_id=target_uid,
@@ -63,12 +63,12 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
             bot_id=ev.bot_id,
         )
         logger.info(
-            f"[MCQueQiao] 用户 {target_uid} 已成功绑定 MC 角色: {player_name} (操作人: {ev.user_id})"
+            f"[MC·游戏绑定] 角色绑定：{target_uid} <-> {player_name}"
         )
         if is_for_other:
-            await bot.send(f"绑定成功：已将用户 {target_uid} 绑定至 MC 角色 {player_name}")
+            await bot.send(f"绑定成功：{target_uid} <-> {player_name}")
         else:
-            await bot.send(f"绑定成功：已将您的账号绑定至 MC 角色 {player_name}")
+            await bot.send("绑定成功！")
 
 
 @sv_mcqq_player_bind.on_command(("解绑", "解除绑定"))
@@ -85,29 +85,26 @@ async def unbind_player_command(bot: Bot, ev: Event) -> None:
         target_uid = ev.user_id
 
     if is_for_other and ev.user_pm > 3:
-        await bot.send("权限不足：只有管理员可以为其他用户解除 MC 绑定")
+        await bot.send("无操作权限！", at=True)
         return
 
     existing = await MCQQUserBind.get_by_user_id(target_uid)
     if not existing:
-        if is_for_other:
-            await bot.send(f"用户 {target_uid} 尚未绑定任何 MC 角色，无需解绑")
-        else:
-            await bot.send("您尚未绑定任何 MC 角色，无需解绑")
+        await bot.send("未查找到相关绑定！")
         return
 
     old_player = existing.player_name
     res = await MCQQUserBind.delete_row(user_id=target_uid)
     if res:
         logger.info(
-            f"[MCQueQiao] 已解除用户 {target_uid} 的 MC 角色绑定 ({old_player}) (操作人: {ev.user_id})"
+            f"[MC·游戏绑定] 角色解绑：{target_uid} <-/-> {old_player}"
         )
         if is_for_other:
-            await bot.send(f"解绑成功：已解除用户 {target_uid} 的 MC 角色绑定 ({old_player})")
+            await bot.send(f"解绑成功：{target_uid} <-/-> {old_player}")
         else:
-            await bot.send(f"解绑成功：已解除您的 MC 角色绑定 ({old_player})")
+            await bot.send("解绑成功！")
     else:
-        await bot.send("解绑失败，请稍后重试")
+        await bot.send("解绑失败，检查控制台！")
 
 
 @sv_mcqq_player_bind.on_command(("我的绑定", "查看绑定", "查询绑定", "玩家绑定"))
@@ -125,21 +122,12 @@ async def check_player_bind_command(bot: Bot, ev: Event) -> None:
 
     existing = await MCQQUserBind.get_by_user_id(target_uid)
     if not existing:
-        if is_for_other:
-            await bot.send(
-                f"用户 {target_uid} 尚未绑定任何 MC 角色\n"
-                f"可发送 mc绑定 @用户 <游戏ID> 为其绑定"
-            )
-        else:
-            await bot.send(
-                "您尚未绑定任何 MC 角色\n"
-                "发送 mc绑定 <游戏ID> 即可进行绑定"
-            )
+        await bot.send("未查找到相关绑定！")
         return
 
     msg = (
-        f"[MC 玩家服务器绑定信息]\n"
-        f"• 用户 ID：{target_uid}\n"
-        f"• MC 游戏角色：{existing.player_name}"
+        f"绑定信息：\n"
+        f" - 用户名 | {target_uid}\n"
+        f" - 游戏名 | {existing.player_name}"
     )
     await bot.send(msg)

@@ -23,7 +23,7 @@ async def title_broadcast_command(bot: Bot, ev: Event) -> None:
 
     text = ev.text.strip()
     if not text:
-        await bot.send("用法：mc广播 <广播内容> 或 mc广播 [服务器] <广播内容>")
+        await bot.send("用法：mc广播 <广播内容>")
         return
 
     servers: Optional[List[MCQQServer]] = None
@@ -64,7 +64,8 @@ async def title_broadcast_command(bot: Bot, ev: Event) -> None:
 
     results = []
     if success_servers:
-        results.append(f"屏幕大标题广播成功！涉及的服务器：\n" + ", ".join(success_servers))
+        formatted_servers = "\n".join(f" - {s}" for s in success_servers)
+        results.append(f"广播完毕，涉及的服务器：\n{formatted_servers}")
     if fail_servers:
         results.extend(fail_servers)
 
@@ -80,7 +81,7 @@ async def chat_broadcast_command(bot: Bot, ev: Event) -> None:
 
     text = ev.text.strip()
     if not text:
-        await bot.send("用法：mc公告 <公告内容> 或 mc公告 [服务器] <公告内容>")
+        await bot.send("用法：mc公告 <公告内容>")
         return
 
     servers: Optional[List[MCQQServer]] = None
@@ -121,7 +122,8 @@ async def chat_broadcast_command(bot: Bot, ev: Event) -> None:
 
     results = []
     if success_servers:
-        results.append(f"聊天栏公告发布成功！涉及的服务器：\n" + ", ".join(success_servers))
+        formatted_servers = "\n".join(f" - {s}" for s in success_servers)
+        results.append(f"公告完毕，涉及的服务器：\n{formatted_servers}")
     if fail_servers:
         results.extend(fail_servers)
 
@@ -137,7 +139,7 @@ async def actionbar_broadcast_command(bot: Bot, ev: Event) -> None:
 
     text = ev.text.strip()
     if not text:
-        await bot.send("用法：mc动作栏 <内容> 或 mc动作栏 [服务器] <内容>")
+        await bot.send("用法：mc动作栏 <内容>")
         return
 
     servers: Optional[List[MCQQServer]] = None
@@ -178,7 +180,8 @@ async def actionbar_broadcast_command(bot: Bot, ev: Event) -> None:
 
     results = []
     if success_servers:
-        results.append(f"动作栏消息发送成功！涉及的服务器：\n" + ", ".join(success_servers))
+        formatted_servers = "\n".join(f" - {s}" for s in success_servers)
+        results.append(f"消息发送成功，涉及的服务器：\n{formatted_servers}")
     if fail_servers:
         results.extend(fail_servers)
 
