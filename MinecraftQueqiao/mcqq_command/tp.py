@@ -7,8 +7,8 @@ from gsuid_core.sv import SV
 
 from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQBind, MCQQServer, MCQQUserBind, MCQQWaypoint
+from ..utils.helpers.admin import is_admin
 from ..utils.helpers.waypoint_helper import (
-    check_admin_permission,
     execute_teleport,
     get_player_pos_and_dimension,
     parse_waypoint_args,
@@ -150,13 +150,12 @@ async def _handle_add_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
 
     # 全局路径点权限校验
     if is_global:
-        is_admin = await check_admin_permission(
+        is_admin_user = await is_admin(
             server.server_name,
-            user_id=ev.user_id,
-            user_pm=ev.user_pm,
+            ev=ev,
             player_name=player_name,
         )
-        if not is_admin:
+        if not is_admin_user:
             await bot.send("权限不足：仅服务器管理员可以添加全局路径点")
             return
 
@@ -232,13 +231,12 @@ async def _handle_delete_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
         return
 
     if is_global:
-        is_admin = await check_admin_permission(
+        is_admin_user = await is_admin(
             server.server_name,
-            user_id=ev.user_id,
-            user_pm=ev.user_pm,
+            ev=ev,
             player_name=player_name,
         )
-        if not is_admin:
+        if not is_admin_user:
             await bot.send("权限不足：仅服务器管理员可以删除全局路径点")
             return
 

@@ -7,6 +7,7 @@ from gsuid_core.logger import logger
 from ...mcqq_config import mcqq_config
 from ...mcqq_core import send_rcon_command
 from ...mcqq_database import MCQQRconWhitelist, MCQQUserBind, MCQQWaypoint
+from .admin import is_admin
 
 
 POS_PATTERN = re.compile(
@@ -150,28 +151,13 @@ async def check_admin_permission(
     user_pm: int = 6,
     player_name: Optional[str] = None,
 ) -> bool:
-    """检查是否具有服务器管理员权限（用于全局路径点增删）。
-
-    鉴权依据:
-      1. Bot 管理员 (user_pm <= 3)
-      2. RCON 白名单中的用户 (MCQQRconWhitelist)
-      3. 游戏内触发时，通过玩家绑定表 (MCQQUserBind) 查找绑定的 user_id 后检查白名单
-    """
-    # 1. 显式传入了 user_id
-    if user_id:
-        if user_pm <= 3:
-            return True
-        if await MCQQRconWhitelist.is_whitelisted(server_name, user_id):
-            return True
-
-    # 2. 仅有 player_name（游戏内触发场景）
-    if player_name:
-        bind = await MCQQUserBind.get_by_player_name(player_name)
-        if bind and bind.user_id:
-            if await MCQQRconWhitelist.is_whitelisted(server_name, bind.user_id):
-                return True
-
-    return False
+    """检查是否具有服务器管理员权限（兼容向后调用，代理至 is_admin）。"""
+    return await is_admin(
+        server_name=server_name,
+        user_id=user_id,
+        user_pm=user_pm,
+        player_name=player_name,
+    )
 
 
 async def handle_ingame_tp_command(
@@ -241,8 +227,8 @@ async def handle_ingame_tp_command(
                 )
                 return True
 
-            is_admin = await check_admin_permission(server_name, player_name=player_name)
-            if not is_admin:
+            is_admin_user = await is_admin(server_name, player_name=player_name)
+            if not is_admin_user:
                 await send_player_tellraw(
                     server_name, player_name, "[传送] 权限不足：仅服务器管理员可添加全局路径点", "red"
                 )
@@ -320,8 +306,8 @@ async def handle_ingame_tp_command(
                 )
                 return True
 
-            is_admin = await check_admin_permission(server_name, player_name=player_name)
-            if not is_admin:
+            is_admin_user = await is_admin(server_name, player_name=player_name)
+            if not is_admin_user:
                 await send_player_tellraw(
                     server_name, player_name, "[传送] 权限不足：仅服务器管理员可删除全局路径点", "red"
                 )

@@ -8,6 +8,7 @@ from gsuid_core.sv import SV
 from ..mcqq_config import mcqq_config
 from ..mcqq_core import send_rcon_command
 from ..mcqq_database import MCQQBind, MCQQServer, MCQQRconWhitelist
+from ..utils.helpers.admin import is_admin
 from ..utils.helpers.prefix_match import is_command_blacklisted
 from ..utils.helpers.server_select import get_group_target_servers, resolve_servers
 from ..utils.helpers.user_select import extract_all_target_users
@@ -108,10 +109,8 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
     for server in targets:
         server_display = server.display_name or server.server_name
 
-        # 权限检查：Bot超级管理员(user_pm <= 2) 或在 RCON 白名单中的用户
-        is_auth = (ev.user_pm <= 2) or await MCQQRconWhitelist.is_whitelisted(
-            server.server_name, ev.user_id
-        )
+        # 权限检查：统一管理员鉴权（群管理员 / RCON 白名单）
+        is_auth = await is_admin(server.server_name, ev=ev)
         if not is_auth:
             results.append(f"[{server_display}] 权限不足：您没有该服务器的 RCON 执行权限")
             continue
