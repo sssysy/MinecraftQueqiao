@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
@@ -8,69 +8,16 @@ from gsuid_core.sv import SV
 from ..mcqq_config import mcqq_config
 from ..mcqq_core import send_rcon_command
 from ..mcqq_database import MCQQBind, MCQQServer, MCQQRconWhitelist
-from ..utils.helpers.admin import is_admin
+from ..utils.helpers.admin import is_admin, parse_rcon_admin_args
 from ..utils.helpers.prefix_match import is_command_blacklisted
 from ..utils.helpers.server_select import get_group_target_servers, resolve_servers
 from ..utils.helpers.user_name import resolve_user_name
-from ..utils.helpers.user_select import extract_all_target_users
 
-sv_mcqq_rcon = SV("鹊桥 RCON 指令", pm=6)
-sv_mcqq_rcon_admin = SV("鹊桥 RCON 管理员管理", pm=3)
-
-
-async def _parse_rcon_admin_args(
-    ev: Event,
-) -> Tuple[Optional[List[MCQQServer]], List[str], Optional[str]]:
-    """解析 RCON 管理员命令参数。
-    返回 (servers, user_ids, error_msg)。
-    servers 为 None 时表示未在命令中显式指定服务器（可由群绑定推断）。
-    """
-    raw_tokens = ev.text.strip().split()
-    servers: Optional[List[MCQQServer]] = None
-    user_tokens: List[str] = []
-    at_users = extract_all_target_users(ev)
-
-    if at_users:
-        # 已通过 @用户 指定目标用户，此时 raw_tokens[0] 若存在必为服务器参数
-        if raw_tokens:
-            first_token = raw_tokens[0]
-            resolved, err = await resolve_servers(first_token)
-            if err:
-                return None, [], err
-            servers = resolved
-            user_tokens = raw_tokens[1:]
-    else:
-        # 未通过 @用户 指定目标用户，需从 raw_tokens 中解析服务器和/或 QQ 号
-        if raw_tokens:
-            first_token = raw_tokens[0]
-            clean_first = first_token.strip().lstrip("@")
-            if not clean_first.isdigit():
-                # 非纯数字必为服务器名称/外显名
-                resolved, err = await resolve_servers(first_token)
-                if err:
-                    return None, [], err
-                servers = resolved
-                user_tokens = raw_tokens[1:]
-            else:
-                # 纯数字：可能是服务器 ID 或用户 QQ 号
-                # 若只有一个 token，必须作为目标用户 QQ 号（由群绑定推断服务器）
-                if len(raw_tokens) == 1:
-                    user_tokens = raw_tokens
-                else:
-                    # 多个 token：优先尝试按服务器 ID 匹配
-                    server = await MCQQServer.get_by_id(int(clean_first))
-                    if server is not None:
-                        servers = [server]
-                        user_tokens = raw_tokens[1:]
-                    else:
-                        # 无法匹配为服务器 ID，则作为纯数字 QQ 号列表兜底
-                        user_tokens = raw_tokens
-
-    unique_user_ids = extract_all_target_users(ev, extra_tokens=user_tokens)
-    return servers, unique_user_ids, None
+sv_mcqq_rcon_admin = SV("鹊桥 RCON 管理员管理", pm=3, priority=4)
+sv_mcqq_rcon = SV("鹊桥 RCON 指令", pm=6, priority=5)
 
 
-@sv_mcqq_rcon.on_command("rcon")
+@sv_mcqq_rcon.on_command("rcon", block=True)
 async def rcon_command(bot: Bot, ev: Event) -> None:
     if ev.user_type != "group" or not ev.group_id:
         await bot.send("请在群聊中使用 mcrcon <指令>")
@@ -129,9 +76,9 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
     await bot.send("\n\n".join(results))
 
 
-@sv_mcqq_rcon_admin.on_command(("增加rcon管理员", "添加rcon管理员"))
+@sv_mcqq_rcon_admin.on_command(("增加rcon管理员", "添加rcon管理员"), block=True)
 async def add_rcon_admin(bot: Bot, ev: Event) -> None:
-    servers, user_ids, err = await _parse_rcon_admin_args(ev)
+    servers, user_ids, err = await parse_rcon_admin_args(ev)
     if err:
         await bot.send(err)
         return
@@ -171,9 +118,9 @@ async def add_rcon_admin(bot: Bot, ev: Event) -> None:
     await bot.send("\n".join(results))
 
 
-@sv_mcqq_rcon_admin.on_command(("删除rcon管理员", "移除rcon管理员"))
+@sv_mcqq_rcon_admin.on_command(("删除rcon管理员", "移除rcon管理员"), block=True)
 async def delete_rcon_admin(bot: Bot, ev: Event) -> None:
-    servers, user_ids, err = await _parse_rcon_admin_args(ev)
+    servers, user_ids, err = await parse_rcon_admin_args(ev)
     if err:
         await bot.send(err)
         return
@@ -213,7 +160,10 @@ async def delete_rcon_admin(bot: Bot, ev: Event) -> None:
     await bot.send("\n".join(results))
 
 
-@sv_mcqq_rcon_admin.on_command(("查看rcon管理员", "查询rcon管理员", "rcon管理员列表", "rcon白名单列表", "rcon白名单"))
+@sv_mcqq_rcon_admin.on_command(
+    ("查看rcon管理员", "查询rcon管理员", "rcon管理员列表"),
+    block=True,
+)
 async def list_rcon_admin(bot: Bot, ev: Event) -> None:
     text = ev.text.strip()
     servers: Optional[List[MCQQServer]] = None

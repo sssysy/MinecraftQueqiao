@@ -1,9 +1,11 @@
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from gsuid_core.logger import logger
 from gsuid_core.models import Event
 
-from ...mcqq_database import MCQQRconWhitelist, MCQQUserBind
+from ...mcqq_database import MCQQRconWhitelist, MCQQServer, MCQQUserBind
+from .server_select import resolve_servers
+from .user_select import extract_all_target_users
 
 
 async def is_admin(
@@ -91,3 +93,55 @@ async def is_admin(
             return True
 
     return False
+
+
+async def parse_rcon_admin_args(
+    ev: Event,
+) -> Tuple[Optional[List[MCQQServer]], List[str], Optional[str]]:
+    """解析 RCON 管理员命令参数。
+    返回 (servers, user_ids, error_msg)。
+    servers 为 None 时表示未在命令中显式指定服务器（可由群绑定推断）。
+    """
+    raw_tokens = ev.text.strip().split()
+    servers: Optional[List[MCQQServer]] = None
+    user_tokens: List[str] = []
+    at_users = extract_all_target_users(ev)
+
+    if at_users:
+        # 已通过 @用户 指定目标用户，此时 raw_tokens[0] 若存在必为服务器参数
+        if raw_tokens:
+            first_token = raw_tokens[0]
+            resolved, err = await resolve_servers(first_token)
+            if err:
+                return None, [], err
+            servers = resolved
+            user_tokens = raw_tokens[1:]
+    else:
+        # 未通过 @用户 指定目标用户，需从 raw_tokens 中解析服务器和/或 QQ 号
+        if raw_tokens:
+            first_token = raw_tokens[0]
+            clean_first = first_token.strip().lstrip("@")
+            if not clean_first.isdigit():
+                # 非纯数字必为服务器名称/外显名
+                resolved, err = await resolve_servers(first_token)
+                if err:
+                    return None, [], err
+                servers = resolved
+                user_tokens = raw_tokens[1:]
+            else:
+                # 纯数字：可能是服务器 ID 或用户 QQ 号
+                # 若只有一个 token，必须作为目标用户 QQ 号（由群绑定推断服务器）
+                if len(raw_tokens) == 1:
+                    user_tokens = raw_tokens
+                else:
+                    # 多个 token：优先尝试按服务器 ID 匹配
+                    server = await MCQQServer.get_by_id(int(clean_first))
+                    if server is not None:
+                        servers = [server]
+                        user_tokens = raw_tokens[1:]
+                    else:
+                        # 无法匹配为服务器 ID，则作为纯数字 QQ 号列表兜底
+                        user_tokens = raw_tokens
+
+    unique_user_ids = extract_all_target_users(ev, extra_tokens=user_tokens)
+    return servers, unique_user_ids, None

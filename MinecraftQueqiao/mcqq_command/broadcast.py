@@ -14,7 +14,7 @@ sv_mcqq_broadcast = SV("鹊桥广播与公告指令", pm=3)
 
 
 
-@sv_mcqq_broadcast.on_command("广播")
+@sv_mcqq_broadcast.on_command("广播", block=True)
 async def title_broadcast_command(bot: Bot, ev: Event) -> None:
     """mc广播: 走鹊桥 send_title (屏幕大标题)"""
     if ev.user_type != "group" or not ev.group_id:
@@ -72,7 +72,7 @@ async def title_broadcast_command(bot: Bot, ev: Event) -> None:
     await bot.send("\n\n".join(results))
 
 
-@sv_mcqq_broadcast.on_command("公告")
+@sv_mcqq_broadcast.on_command("公告", block=True)
 async def chat_broadcast_command(bot: Bot, ev: Event) -> None:
     """mc公告: 走鹊桥 broadcast (聊天栏广播)"""
     if ev.user_type != "group" or not ev.group_id:
@@ -130,7 +130,7 @@ async def chat_broadcast_command(bot: Bot, ev: Event) -> None:
     await bot.send("\n\n".join(results))
 
 
-@sv_mcqq_broadcast.on_command(("动作栏", "actionbar", "状态栏"))
+@sv_mcqq_broadcast.on_command(("动作栏", "状态栏"), block=True)
 async def actionbar_broadcast_command(bot: Bot, ev: Event) -> None:
     """mc动作栏: 走鹊桥 send_actionbar (动作栏消息)"""
     if ev.user_type != "group" or not ev.group_id:

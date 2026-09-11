@@ -8,7 +8,7 @@ from ..mcqq_ws import ws_manager
 sv_mcqq_ws = SV("鹊桥ws连接状态指令", pm=3)
 
 
-@sv_mcqq_ws.on_fullmatch(("连接状态", "ws状态", "WS状态", "刷新ws连接"))
+@sv_mcqq_ws.on_fullmatch(("连接状态", "ws状态", "WS状态"), block=True)
 async def check_ws_status(bot: Bot, ev: Event) -> None:
     servers = await MCQQServer.get_all_enabled()
     if not servers:

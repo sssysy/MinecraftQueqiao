@@ -14,7 +14,7 @@ sv_mcqq_server_manage = SV("鹊桥服务器管理指令", pm=3)
 SESSION_TIMEOUT = 300.0
 
 
-@sv_mcqq_server_manage.on_command("添加服务器")
+@sv_mcqq_server_manage.on_command("添加服务器", block=True)
 async def add_server_command(bot: Bot, ev: Event) -> None:
     # 仅允许在私聊中进行添加服务器多步会话
     if ev.user_type != "direct":
@@ -103,7 +103,7 @@ async def add_server_command(bot: Bot, ev: Event) -> None:
     )
 
 
-@sv_mcqq_server_manage.on_command("删除服务器")
+@sv_mcqq_server_manage.on_command("删除服务器", block=True)
 async def delete_server_command(bot: Bot, ev: Event) -> None:
     server_text = ev.text.strip()
     if not server_text:

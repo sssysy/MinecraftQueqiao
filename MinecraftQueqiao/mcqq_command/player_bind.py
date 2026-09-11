@@ -8,10 +8,10 @@ from gsuid_core.sv import SV
 from ..mcqq_database import MCQQUserBind
 from ..utils.helpers.user_select import extract_single_target_user
 
-sv_mcqq_player_bind = SV("鹊桥玩家绑定")
+sv_mcqq_player_bind = SV("鹊桥玩家绑定", priority=4)
 
 
-@sv_mcqq_player_bind.on_command("绑定")
+@sv_mcqq_player_bind.on_command("绑定", block=True)
 async def bind_player_command(bot: Bot, ev: Event) -> None:
     """绑定 Minecraft 游戏角色名。
     用法：
@@ -71,7 +71,7 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
             await bot.send("绑定成功！")
 
 
-@sv_mcqq_player_bind.on_command(("解绑", "解除绑定"))
+@sv_mcqq_player_bind.on_command(("解绑", "解除绑定"), block=True)
 async def unbind_player_command(bot: Bot, ev: Event) -> None:
     """解除 Minecraft 游戏角色名绑定。
     用法：
@@ -107,7 +107,7 @@ async def unbind_player_command(bot: Bot, ev: Event) -> None:
         await bot.send("解绑失败，检查控制台！")
 
 
-@sv_mcqq_player_bind.on_command(("我的绑定", "查看绑定", "查询绑定", "玩家绑定"))
+@sv_mcqq_player_bind.on_command(("查看绑定", "查询绑定"), block=True)
 async def check_player_bind_command(bot: Bot, ev: Event) -> None:
     """查询绑定信息。
     用法：

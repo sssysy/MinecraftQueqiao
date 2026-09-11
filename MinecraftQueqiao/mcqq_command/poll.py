@@ -8,7 +8,7 @@ from ..mcqq_poll import refresh_poll_jobs
 sv_mcqq_poll = SV("鹊桥定时公告指令", pm=3)
 
 
-@sv_mcqq_poll.on_fullmatch("刷新定时公告")
+@sv_mcqq_poll.on_fullmatch("刷新定时公告", block=True)
 async def refresh_poll_command(bot: Bot, ev: Event) -> None:
     """mc刷新定时公告: 重新读取数据库并注册定时公告任务"""
     try:
