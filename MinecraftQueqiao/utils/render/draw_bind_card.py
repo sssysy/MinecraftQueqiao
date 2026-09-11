@@ -235,7 +235,7 @@ async def draw_bind_card(
         f"用户名：{user_name}",
     ]
 
-    title_font = _fit_font(draw, title_text, FONT_SIZE_BASE, TEXT_MAX_W)
+    title_font = _fit_font(draw, title_text, FONT_SIZE_BASE, CANVAS_W - 100)
     body_font = _fit_font_pair(draw, body_texts, FONT_SIZE_BASE, TEXT_MAX_W)
 
     render_items = [
@@ -250,7 +250,7 @@ async def draw_bind_card(
         y = int(TEXT_TOP + i * block_h + (block_h - th) / 2) - LINE_TOP_PAD
         if is_title:
             tw = _text_width(draw, text, font)
-            x = TEXT_X + max(0, (TEXT_MAX_W - tw) // 2)
+            x = max(0, (CANVAS_W - tw) // 2)
         else:
             x = TEXT_X
         draw.text((x, y), text, font=font, fill=color)
