@@ -89,28 +89,47 @@ async def get_player_uuid(player_name: str) -> str:
 def get_default_avatar() -> Optional[Image.Image]:
     """获取本地默认头像。"""
     if not DEFAULT_AVATAR_PATH.exists():
+        logger.warning(f"[MCQueQiao] 默认头像文件不存在: {DEFAULT_AVATAR_PATH}")
         return None
     try:
         img = Image.open(DEFAULT_AVATAR_PATH).convert("RGBA")
+        logger.info(f"[MCQueQiao] 已加载本地默认头像: {DEFAULT_AVATAR_PATH}")
         return img.resize((AVATAR_SIZE, AVATAR_SIZE), Image.NEAREST)
     except Exception as e:
-        logger.debug(f"[MCQueQiao] 默认头像加载失败: {e}")
+        logger.error(f"[MCQueQiao] 默认头像加载异常: {e}")
         return None
 
 
 async def get_player_avatar(player_name: str) -> Optional[Image.Image]:
     """从 mc-heads.net 获取玩家头像，失败时使用本地默认头像。"""
+    url = f"https://mc-heads.net/avatar/{player_name}/{AVATAR_SIZE}"
+    logger.info(f"[MCQueQiao] 开始获取玩家头像: {player_name} -> {url}")
     try:
-        url = f"https://mc-heads.net/avatar/{player_name}/{AVATAR_SIZE}"
         async with httpx.AsyncClient(
             timeout=HTTP_TIMEOUT, headers=HTTP_HEADERS, follow_redirects=True
         ) as client:
             resp = await client.get(url)
+            logger.debug(
+                f"[MCQueQiao] 玩家头像接口响应({player_name}): HTTP {resp.status_code}, "
+                f"content-type={resp.headers.get('content-type')}, len={len(resp.content)}"
+            )
             if resp.status_code == 200 and resp.content:
                 img = Image.open(BytesIO(resp.content)).convert("RGBA")
+                logger.info(
+                    f"[MCQueQiao] 玩家头像下载成功: {player_name} (模式: {img.mode}, 大小: {len(resp.content)} 字节)"
+                )
                 return img.resize((AVATAR_SIZE, AVATAR_SIZE), Image.NEAREST)
+            else:
+                logger.warning(
+                    f"[MCQueQiao] 玩家头像下载失败({player_name}): HTTP {resp.status_code}, "
+                    f"响应内容: {resp.text[:200]}"
+                )
+    except httpx.TimeoutException:
+        logger.warning(f"[MCQueQiao] 玩家头像下载超时({player_name}): 超过 {HTTP_TIMEOUT} 秒")
     except Exception as e:
-        logger.debug(f"[MCQueQiao] 玩家头像获取失败({player_name}): {e}")
+        logger.warning(f"[MCQueQiao] 玩家头像下载异常({player_name}): {type(e).__name__}: {e}")
+
+    logger.info(f"[MCQueQiao] 玩家头像获取未成功，回退至本地默认头像({player_name})")
     return get_default_avatar()
 
 
