@@ -75,6 +75,11 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "是否启用传送点及传送相关指令",
         True,
     ),
+    "hide_player_uuid": GsBoolConfig(
+        "隐藏玩家UUID",
+        "开启后，查看绑定卡片中的 UUID 仅显示前两位与后两位，其余以 * 号代替",
+        False,
+    ),
 }
 
 CONFIG_PATH = get_res_path() / "MinecraftQueqiao" / "config.json"

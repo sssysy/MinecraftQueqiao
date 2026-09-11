@@ -3,10 +3,14 @@ from typing import Optional, Tuple
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
 from gsuid_core.models import Event
+from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV
 
+from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQUserBind
+from ..utils.helpers.user_name import resolve_user_name
 from ..utils.helpers.user_select import extract_single_target_user
+from ..utils.render.draw_bind_card import draw_bind_card
 
 sv_mcqq_player_bind = SV("鹊桥玩家绑定", priority=4)
 
@@ -125,9 +129,32 @@ async def check_player_bind_command(bot: Bot, ev: Event) -> None:
         await bot.send("未查找到相关绑定！")
         return
 
-    msg = (
-        f"绑定信息：\n"
-        f" - 用户名 | {target_uid}\n"
-        f" - 游戏名 | {existing.player_name}"
-    )
-    await bot.send(msg)
+    if is_for_other or target_uid != ev.user_id:
+        user_name = await resolve_user_name(
+            ev.bot_id, target_uid, ev.group_id or ""
+        )
+        if not user_name:
+            user_name = target_uid
+    else:
+        user_name = (
+            ev.sender.get("nickname", "") if isinstance(ev.sender, dict) else ""
+        ) or target_uid
+
+    hide_uuid = bool(mcqq_config.get_config("hide_player_uuid").data)
+    try:
+        img_bytes, _ = await draw_bind_card(
+            player_name=existing.player_name,
+            user_name=str(user_name),
+            hide_uuid=hide_uuid,
+        )
+    except Exception as e:
+        logger.warning(f"[MCQueQiao] 绘制绑定卡片失败，回退文本: {e}")
+        msg = (
+            f"绑定信息：\n"
+            f" - 用户名 | {user_name}\n"
+            f" - 游戏名 | {existing.player_name}"
+        )
+        await bot.send(msg)
+        return
+
+    await bot.send(MessageSegment.image(img_bytes))
