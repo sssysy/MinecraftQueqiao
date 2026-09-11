@@ -17,15 +17,20 @@ BASE_W, BASE_H = 768, 384
 CANVAS_W = BASE_W * SCALE
 CANVAS_H = BASE_H * SCALE
 
-AVATAR_SIZE = 220
-AVATAR_X = 160
+AVATAR_SIZE = 340
+AVATAR_X = 90
 AVATAR_Y = (CANVAS_H - AVATAR_SIZE) // 2
 
-TEXT_X = 500
-TEXT_START_Y = 150
-LINE_GAP = 115
-FONT_SIZE_TITLE = 48
-FONT_SIZE_BODY = 36
+TEXT_X = 480
+TEXT_RIGHT_PAD = 50
+TEXT_MAX_W = CANVAS_W - TEXT_X - TEXT_RIGHT_PAD
+# 四行几乎占满高度：上下留少量边距
+TEXT_TOP = 28
+LINE_BLOCK_H = (CANVAS_H - TEXT_TOP * 2) / 4
+FONT_SIZE_TITLE = 128
+FONT_SIZE_BODY = 120
+FONT_SIZE_MIN = 36
+LINE_TOP_PAD = 6
 
 TEXT_COLOR = (55, 45, 35)
 TITLE_COLOR = (40, 32, 24)
@@ -98,20 +103,49 @@ async def get_player_avatar(player_name: str) -> Optional[Image.Image]:
 
 
 def _load_font(size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(str(FONT_PATH), size=size)
+    return ImageFont.truetype(str(FONT_PATH), size=max(1, int(size)))
+
+
+def _text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
+    bbox = draw.textbbox((0, 0), text, font=font)
+    return bbox[2] - bbox[0]
+
+
+def _text_height(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
+    bbox = draw.textbbox((0, 0), text, font=font)
+    return bbox[3] - bbox[1]
+
+
+def _fit_font(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    size: int,
+    max_w: int,
+) -> ImageFont.ImageFont:
+    """按最大宽度收缩字号，保证整行可见。"""
+    size = int(size)
+    while size > FONT_SIZE_MIN:
+        font = _load_font(size)
+        if _text_width(draw, text, font) <= max_w:
+            return font
+        size -= 4
+    return _load_font(FONT_SIZE_MIN)
 
 
 def _draw_placeholder(draw: ImageDraw.ImageDraw) -> None:
     x0, y0 = AVATAR_X, AVATAR_Y
     x1, y1 = x0 + AVATAR_SIZE, y0 + AVATAR_SIZE
-    draw.rectangle([x0, y0, x1, y1], fill=PLACEHOLDER_BG, outline=PLACEHOLDER_BORDER, width=4)
-    try:
-        font = _load_font(28)
-    except OSError:
-        font = ImageFont.load_default()
+    border = max(4, AVATAR_SIZE // 50)
+    draw.rectangle(
+        [x0, y0, x1, y1],
+        fill=PLACEHOLDER_BG,
+        outline=PLACEHOLDER_BORDER,
+        width=border,
+    )
+    font = _load_font(max(28, AVATAR_SIZE // 8))
     text = "游戏头像"
-    bbox = draw.textbbox((0, 0), text, font=font)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    tw = _text_width(draw, text, font)
+    th = _text_height(draw, text, font)
     tx = x0 + (AVATAR_SIZE - tw) // 2
     ty = y0 + (AVATAR_SIZE - th) // 2
     draw.text((tx, ty), text, font=font, fill=TEXT_COLOR)
@@ -142,27 +176,27 @@ async def draw_bind_card(
 
     draw = ImageDraw.Draw(canvas)
     try:
-        title_font = _load_font(FONT_SIZE_TITLE)
-        body_font = _load_font(FONT_SIZE_BODY)
+        _load_font(FONT_SIZE_TITLE)
     except OSError as e:
-        logger.warning(f"[MCQueQiao] 加载 MC 字体失败，使用默认字体: {e}")
-        title_font = ImageFont.load_default()
-        body_font = title_font
+        logger.warning(f"[MCQueQiao] 加载 MC 字体失败: {e}")
+        raise
 
-    lines = [
-        ("绑定信息", title_font, TITLE_COLOR),
-        (f"游戏名：{player_name}", body_font, TEXT_COLOR),
-        (f"用户名：{user_name}", body_font, TEXT_COLOR),
-        (f"UUID：{display_uuid}", body_font, TEXT_COLOR),
+    raw_lines = [
+        ("绑定信息", FONT_SIZE_TITLE, TITLE_COLOR, True),
+        (f"游戏名：{player_name}", FONT_SIZE_BODY, TEXT_COLOR, False),
+        (f"用户名：{user_name}", FONT_SIZE_BODY, TEXT_COLOR, False),
+        (f"UUID：{display_uuid}", FONT_SIZE_BODY, TEXT_COLOR, False),
     ]
 
-    for i, (text, font, color) in enumerate(lines):
-        y = TEXT_START_Y + i * LINE_GAP
+    for i, (text, size, color, is_title) in enumerate(raw_lines):
+        font = _fit_font(draw, text, size, TEXT_MAX_W)
+        th = _text_height(draw, text, font)
+        block_h = LINE_BLOCK_H
+        y = int(TEXT_TOP + i * block_h + (block_h - th) / 2) - LINE_TOP_PAD
         x = TEXT_X
-        if i == 0:
-            bbox = draw.textbbox((0, 0), text, font=font)
-            tw = bbox[2] - bbox[0]
-            x = TEXT_X + max(0, (CANVAS_W - TEXT_X - 80 - tw) // 2)
+        if is_title:
+            tw = _text_width(draw, text, font)
+            x = TEXT_X + max(0, (TEXT_MAX_W - tw) // 2)
         draw.text((x, y), text, font=font, fill=color)
 
     buf = BytesIO()
