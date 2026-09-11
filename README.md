@@ -20,39 +20,28 @@
   <img src="https://count.getloli.com/get/@MinecraftQueqiao?theme=minecraft&padding=6" />
 </p>
 
-## 丨目录
-
-- [一、安装提醒](#丨安装提醒)
-- [二、绑定 / 使用教程](#丨绑定--使用教程)
-  - [1. 安装鹊桥服务端](#1-安装鹊桥服务端)
-  - [2. 配置鹊桥 config.yml（反向 WebSocket 连接）](#2-配置鹊桥-configyml反向-websocket-连接)
-  - [3. 启动 Minecraft 服务器](#3-启动-minecraft-服务器)
-  - [4. 在 Gscore 中安装本插件](#4-在-gscore-中安装本插件)
-  - [5. 添加服务器](#5-添加服务器)
-  - [6. 刷新服务器端鹊桥插件](#6-刷新服务器端鹊桥插件)
-  - [7. 插件配置说明](#7-插件配置说明)
-- [三、功能使用教程](#功能使用教程)
-  - [设置定时公告](#设置定时公告)
-- [四、指令列表](#丨指令列表)
-- [五、常见问题](#常见问题)
-- [六、致谢](#致谢)
-
 ## 丨安装提醒
 
 > **注意：该插件为 [早柚核心(gsuid_core)](https://github.com/Genshin-bots/gsuid_core) 的扩展，具体安装方式可参考上方安装文档**
 >
-> **运行环境要求 Python `3.12+`**
->
-> 🚧 项目快速迭代中，如有 BUG 欢迎 PR 🚧
+> 🎉 基础功能已开发完毕，如有 BUG 欢迎 PR 🎉
 
 ## 丨绑定 / 使用教程
 
 #### 1. 安装鹊桥服务端
+<details>
+<summary>点击展开</summary>
+
 前往 [Modrinth](https://modrinth.com/plugin/queqiao) 或 [CurseForge](https://www.curseforge.com/minecraft/mc-mods/queqiao) 下载并安装服务端对应的 `插件/Mod`。
 - 插件端配置文件位于 `./plugins/QueQiao/config.yml`。
 - 模组端配置文件位于 `./config/QueQiao/config.yml`。
 
+</details>
+
 #### 2. 配置鹊桥 `config.yml`（反向 WebSocket 连接）
+<details>
+<summary>点击展开</summary>
+
 ```yaml
 server_name: "MyServer"        # 服务器名称（需与 Gscore 中配置的 ServerName 一致）
 access_token: "your_token"     # 访问密钥（选填，与 Gscore 一致）
@@ -70,6 +59,8 @@ websocket_client:
     # 127.0.0.1 应为 gscore 基础地址
 ```
 
+</details>
+
 #### 3. 启动 Minecraft 服务器
 
 #### 4. 在 Gscore 中安装本插件
@@ -77,6 +68,9 @@ websocket_client:
 - **方法二**：手动安装：下载本仓库并放置在 `gsuid_core/plugins/` 目录下。
 
 #### 5. 添加服务器
+<details>
+<summary>点击展开</summary>
+
 ##### （1）通过指令绑定服务器（推荐）
 - 输入指令 `mc添加服务器` ，之后根据提示进行操作即可。
 ##### （2）通过网页控制台添加服务器
@@ -92,10 +86,15 @@ websocket_client:
 | **access_token** | 鹊桥 access_token |
 | **启用 ChatImage** | 若安装了 [ChatImage](https://www.mcmod.cn/class/9111.html) MOD 可开启聊天框图片预览 |
 
+</details>
+
 #### 6. 刷新服务器端鹊桥插件
 - 在服务器控制台输入`queqiao reload`以重载服务端鹊桥
 
 #### 7. 插件配置说明
+<details>
+<summary>点击展开</summary>
+
 访问 Gscore `网页控制台 -> 插件配置 -> MinecraftQueqiao`：
 | 配置项 | 说明 |
 | :--- | :--- |
@@ -111,9 +110,13 @@ websocket_client:
 | **转发指令过滤黑名单** | 屏蔽通过 RCON 转发到 MC 服务器执行的指令列表<br>• **普通前缀**：直接填写指令名（如 `stop`、`op`）<br>• **正则表达式**：以 `r:` 开头（如 `r:^stop(\s.*)?$`）<br>• 命中黑名单时提示：`黑名单指令，跳过传递` |
 | **是否开启传送指令** | 是否启用传送点及传送相关指令（默认开启） |
 
+</details>
+
 ## 功能使用教程
 
-### 设置定时公告
+<details>
+<summary id="设置定时公告">设置定时公告</summary>
+
 1. 访问 Gscore `网页控制台 -> 数据库管理 -> MinecraftQueqiao -> 定时公告 -> 新增`
 2. 填入公告相关信息：
    - `是否启用`: 是否开启该定时公告
@@ -125,9 +128,14 @@ websocket_client:
      - **留空 / 0**：默认不推送
 3. **刷新生效**：在网页后台添加或修改数据后，在群聊中发送 `mc刷新定时公告` 指令即可立即重新加载并注册定时任务。
 
+</details>
+
 ---
 
 ## 丨指令列表
+
+<details>
+<summary>点击展开</summary>
 
 ### 绑定相关
 
@@ -154,13 +162,11 @@ websocket_client:
 
 | 指令 | 简介 |
 | :--- | :--- |
-| `查看服务器` | 查看服务器状态 |
+| `服务器` | 查看服务器状态 |
 | `私信` | 向指定绑定的玩家或游戏ID发送私聊 |
 | `mod搜索` | 在 MC 百科搜索模组资料与链接 |
 
-### 传送功能
-
-> **支持群聊与 Minecraft 游戏内双端触发（游戏内直接在聊天栏输入，如 `mctp 家`）。**
+### 传送功能 (游戏内可使用)
 
 | 指令 | 简介 |
 | :--- | :--- |
@@ -180,12 +186,7 @@ websocket_client:
 | `查看rcon管理员` | 查看服务器 RCON 白名单管理员列表 |
 | `连接状态` | 查看所有MC服务器的反向WS连接状态 |
 
-### 待更新 (低优先)
-
-| 待更新 (低优先) |
-|:----------:|
-|playwright 渲染|
-|跨服聊天互通(服A <-> 服B)|
+</details>
 
 ---
 
@@ -197,6 +198,8 @@ websocket_client:
 #### 2. 群聊消息转发到游戏中有 `[鹊桥]` 等前缀
 > 请在鹊桥服务端配置文件 `config.yml` 中修改 `message_prefix` 配置。
 
+#### 3. 插件是否适配正向 Websocket 连接？
+> 反向 ws 连接适配大部分场景，暂时没有适配正向 Websocket 的计划
 
 ## 丨其他
 

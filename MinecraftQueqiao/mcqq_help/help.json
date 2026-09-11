@@ -101,9 +101,9 @@
     "desc": "实用功能",
     "data": [
       {
-        "name": "查看服务器",
+        "name": "服务器状态",
         "desc": "查看服务器状态",
-        "eg": "查看 (Server)",
+        "eg": "服务器 (Server)",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
