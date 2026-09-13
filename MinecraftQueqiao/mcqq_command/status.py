@@ -17,7 +17,17 @@ sv_mcqq_status = SV("鹊桥服务器状态指令")
 
 
 @sv_mcqq_status.on_command(
-    ("服务器", "服务器状态"), block=True
+    ("服务器", "服务器状态"),
+    block=True,
+    to_ai="""查询当前 Minecraft 服务器的运行状态。
+当用户询问服务器是否在线、服务器挂了吗、当前在线人数、在线玩家列表/有谁在玩、服务器地址/IP/端口、游戏版本或延迟时调用。
+
+Args:
+    text: 可选。指定要查询的服务器名称或 IP 地址。
+          - 留空/空字符串：默认查询当前群绑定的所有 MC 服务器状态。
+          - 指定服务器名：例如 "生存服"、"香草纪元"。
+          - 指定 IP/域名：例如 "play.example.com" 或 "127.0.0.1:25565"。
+""",
 )
 async def status_command(bot: Bot, ev: Event) -> None:
     text = ev.text.strip()

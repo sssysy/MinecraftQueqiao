@@ -2,6 +2,7 @@ import json
 import re
 from typing import List, Optional, Tuple
 
+from gsuid_core.ai_core.trigger_bridge import ai_return
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
 from gsuid_core.models import Event
@@ -530,6 +531,8 @@ async def handle_teleport(bot: Bot, ev: Event) -> None:
     )
     if not ok:
         await bot.send(f"传送失败: {msg}")
+    else:
+        ai_return(f"传送成功：已将玩家 {player_name} 传送至路径点 {point.point_name}")
     # 传送成功后游戏内已发送 tellraw，群聊按要求不发送任何提示
 
 

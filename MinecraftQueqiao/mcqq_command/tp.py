@@ -18,7 +18,17 @@ async def list_waypoint_command(bot: Bot, ev: Event) -> None:
     await handle_list_waypoint(bot, ev)
 
 
-@sv_mcqq_tp.on_command("tp", block=True)
+@sv_mcqq_tp.on_command(
+    "tp",
+    block=True,
+    to_ai="""将当前用户在 Minecraft 游戏内的角色传送到指定路径点/地标。
+仅当用户明确要求传送自己时调用（如"把我传送到家"、"传送到主城"、"tp 刷铁机"）。
+闲聊、询问传送机制或单纯讨论地名时切勿调用！需要用户已绑定游戏角色且正在服务器游戏中。
+
+Args:
+    text: 要传送的目标路径点名称。例如 "家"、"主城"、"刷铁机"。
+""",
+)
 async def teleport_command(bot: Bot, ev: Event) -> None:
     """传送指令: mctp <路径点名称>"""
     await handle_teleport(bot, ev)

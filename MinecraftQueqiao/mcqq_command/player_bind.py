@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
 
+from gsuid_core.ai_core.trigger_bridge import ai_return
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
 from gsuid_core.models import Event
@@ -111,7 +112,16 @@ async def unbind_player_command(bot: Bot, ev: Event) -> None:
         await bot.send("解绑失败，检查控制台！")
 
 
-@sv_mcqq_player_bind.on_command(("查看绑定", "查询绑定"), block=True)
+@sv_mcqq_player_bind.on_command(
+    ("查看绑定", "查询绑定"),
+    block=True,
+    to_ai="""查询当前用户或指定用户在 Minecraft 服务器中绑定的游戏角色名及绑定信息。
+当用户询问"我绑定了什么游戏ID"、"我绑定的MC名字叫什么"、"查看我的绑定卡片"或查询某人绑定时调用。
+
+Args:
+    text: 可选。要查询的目标用户（QQ号或@提及）。留空或空字符串则默认查询当前发送者自己。
+""",
+)
 async def check_player_bind_command(bot: Bot, ev: Event) -> None:
     """查询绑定信息。
     用法：
@@ -139,6 +149,11 @@ async def check_player_bind_command(bot: Bot, ev: Event) -> None:
         user_name = (
             ev.sender.get("nickname", "") if isinstance(ev.sender, dict) else ""
         ) or target_uid
+
+    ai_return(
+        f"绑定信息：用户 {user_name} (ID: {target_uid}) "
+        f"当前绑定的 Minecraft 角色名为：{existing.player_name}"
+    )
 
     hide_uuid = bool(mcqq_config.get_config("hide_player_uuid").data)
     try:
