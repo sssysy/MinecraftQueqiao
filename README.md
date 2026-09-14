@@ -44,19 +44,19 @@
 
 ```yaml
 server_name: "MyServer"        # 服务器名称（需与 Gscore 中配置的 ServerName 一致）
-access_token: "your_token"     # 访问密钥（选填，与 Gscore 一致）
+access_token: "your_token"
 
 websocket_server:
-  enable: false                # 关闭鹊桥本地服务端
+  enable: false                # 关闭
 
 websocket_client:
-  enable: true                 # 开启反向客户端连接
+  enable: true                 # 开启
   reconnect_interval: 5
   reconnect_max_times: 0
   url_list:
     - "ws://127.0.0.1:8765/minecraft/ws/MyServer"
-    # MyServer未填写时默认使用 server_name 值
-    # 127.0.0.1 应为 gscore 基础地址
+    # MyServer可选填
+    # 127.0.0.1:8765 应为 GsCore 可达地址
 ```
 
 </details>
@@ -64,8 +64,12 @@ websocket_client:
 #### 3. 启动 Minecraft 服务器
 
 #### 4. 在 Gscore 中安装本插件
-- **方法一**：从 Gscore 网页控制台安装：`网页控制台 -> 插件商城 -> 从 URL 安装`
-- **方法二**：手动安装：下载本仓库并放置在 `gsuid_core/plugins/` 目录下。
+- **方法一（推荐）**：直接对 bot 发送 `core安装插件MinecraftQueqiao`
+- **方法二**：手动安装：在插件目录下执行命令：
+
+  ```
+  git clone https://github.com/sssysy/MinecraftQueqiao.git
+  ```
 
 #### 5. 添加服务器
 <details>
