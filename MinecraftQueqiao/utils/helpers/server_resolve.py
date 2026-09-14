@@ -50,16 +50,20 @@ async def get_group_servers(
     if not binds:
         return []
     servers: List[MCQQServer] = []
-    seen: set[str] = set()
+    seen: set[int] = set()
     for bind in binds:
-        if bind.server_name in seen:
-            continue
-        server = await MCQQServer.get_by_name(bind.server_name)
+        server = None
+        if bind.server_id:
+            server = await MCQQServer.get_by_id(bind.server_id)
+        if server is None and bind.server_name:
+            server = await MCQQServer.get_by_name(bind.server_name)
         if server is None:
+            continue
+        if server.id in seen:
             continue
         if only_enabled and not server.enabled:
             continue
-        seen.add(bind.server_name)
+        seen.add(server.id)
         servers.append(server)
     return servers
 

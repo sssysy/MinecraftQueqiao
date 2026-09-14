@@ -138,18 +138,29 @@ async def _upsert_server(
 
 
 async def _finish_add(bot: Bot, data: Dict[str, Any]) -> None:
+    server_name = str(data.get("server_name") or "").strip()
+    server_address = str(data.get("server_address") or "").strip()
+    if not server_name or not server_address:
+        _ai_return("错误：服务器名称和服务器地址不能为空。")
+        await bot.send("服务器名称和服务器地址不能为空，添加已取消。")
+        return
+
+    display_name = data.get("display_name", "")
+    access_token = data.get("access_token", "")
+    chatimage_enabled = bool(data.get("chatimage_enabled", False))
+
     action = await _upsert_server(
-        server_name=data["server_name"],
-        display_name=data.get("display_name", ""),
-        access_token=data.get("access_token", ""),
-        server_address=data["server_address"],
-        chatimage_enabled=bool(data.get("chatimage_enabled", False)),
+        server_name=server_name,
+        display_name=display_name,
+        access_token=access_token,
+        server_address=server_address,
+        chatimage_enabled=chatimage_enabled,
     )
     _ai_return(
-        f"{action}服务器 '{data['server_name']}' 成功："
-        f"地址={data['server_address']}，"
-        f"外显名={data.get('display_name') or '(空)'}，"
-        f"ChatImage={'开' if data.get('chatimage_enabled') else '关'}。"
+        f"{action}服务器 '{server_name}' 成功："
+        f"地址={server_address}，"
+        f"外显名={display_name or '(空)'}，"
+        f"ChatImage={'开' if chatimage_enabled else '关'}。"
         "提醒用户到群内使用 mc群服绑定。"
     )
     await bot.send(

@@ -2,6 +2,7 @@ import asyncio
 from typing import List, Optional
 
 from gsuid_core.bot import Bot
+from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
@@ -68,7 +69,11 @@ async def status_command(bot: Bot, ev: Event) -> None:
     for server, result in zip(targets, results):
         if isinstance(result, Exception):
             name = server.display_name or server.server_name
-            lines.append(f"{name}\n状态：查询失败 ({result})")
+            logger.error(
+                f"[MCQueQiao] 查询服务器 '{server.server_name}' 状态失败: {result}",
+                exc_info=result,
+            )
+            lines.append(f"{name}\n状态：查询失败")
         else:
             lines.append(result)
 

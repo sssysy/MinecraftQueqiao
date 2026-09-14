@@ -13,6 +13,7 @@ from starlette.websockets import WebSocketState
 from gsuid_core.app_life import app
 from gsuid_core.logger import logger
 
+from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQServer
 
 
@@ -232,6 +233,15 @@ async def _handle_queqiao_ws_session(
         if client_token != server.access_token:
             logger.warning(f"[MC·Websocket] ws连接拒绝：{server_name} 鉴权失败")
             await websocket.close(code=1008, reason="Invalid access token")
+            return
+    else:
+        client_ip = websocket.client.host if websocket.client else ""
+        trusted_ips: List[str] = mcqq_config.get_config("trusted_ips").data
+        if client_ip not in trusted_ips:
+            logger.warning(
+                f"[MC·Websocket] ws连接拒绝：{server_name} 未配置 access_token 且客户端 IP '{client_ip}' 不在受信任列表中"
+            )
+            await websocket.close(code=1008, reason="Untrusted IP address")
             return
 
     await websocket.accept()

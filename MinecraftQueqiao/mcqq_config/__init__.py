@@ -85,6 +85,11 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "游戏内触发传送等指令的前缀，与群聊 mc 前缀相互独立",
         "mc",
     ),
+    "trusted_ips": GsListStrConfig(
+        "受信任IP地址",
+        "当access_token为空时校验",
+        ["127.0.0.1"],
+    ),
 }
 
 CONFIG_PATH = get_res_path() / "MinecraftQueqiao" / "config.json"

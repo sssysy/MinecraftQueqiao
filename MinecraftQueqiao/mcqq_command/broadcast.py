@@ -29,7 +29,7 @@ async def _resolve_push_args(
         return targets, decode_arg(tokens[0])
 
     if len(tokens) == 2:
-        servers, err = await resolve_servers(tokens[0])
+        servers, err = await resolve_servers(decode_arg(tokens[0]))
         if err or not servers:
             await bot.send(err or f"未找到服务器 {tokens[0]}")
             return None

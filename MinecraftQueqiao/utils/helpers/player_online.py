@@ -68,15 +68,11 @@ async def get_player_pos(
     except (ValueError, IndexError):
         return None
 
-    dimension = "minecraft:overworld"
     ok_dim, out_dim = await send_rcon_command(
         server_name, f"data get entity {player_name} Dimension"
     )
-    if ok_dim and out_dim:
-        dim_match = DIM_PATTERN.search(str(out_dim))
-        if dim_match:
-            dimension = (
-                dim_match.group(1) or dim_match.group(2) or "minecraft:overworld"
-            )
+    dim_match = DIM_PATTERN.search(str(out_dim)) if ok_dim and out_dim else None
+    if not dim_match:
+        return None
 
-    return (x, y, z, dimension)
+    return (x, y, z, dim_match.group(1) or dim_match.group(2))

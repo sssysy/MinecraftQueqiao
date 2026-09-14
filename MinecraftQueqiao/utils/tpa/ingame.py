@@ -23,7 +23,7 @@ async def _tpa(server_name: str, player_name: str, args: str) -> None:
         )
         return
 
-    tokens, err = parse_positional(raw, min_args=1, max_args=1, names=("目标/同意/拒绝",))
+    tokens, err = parse_positional(raw, min_args=1, max_args=2, names=("动作/目标", "申请人"))
     if err:
         await service.tellraw(
             server_name,
@@ -35,16 +35,17 @@ async def _tpa(server_name: str, player_name: str, args: str) -> None:
 
     action = tokens[0]
     action_key = action.lower()
+    target_or_requester = tokens[1] if len(tokens) > 1 else None
 
     if action_key in _ACCEPT_WORDS:
-        ok, msg = await service.accept_tp(server_name, player_name)
+        ok, msg = await service.accept_tp(server_name, player_name, target_or_requester)
         await service.tellraw(
             server_name, player_name, msg, "green" if ok else "yellow"
         )
         return
 
     if action_key in _DENY_WORDS:
-        result = await service.deny_tp(server_name, player_name)
+        result = await service.deny_tp(server_name, player_name, target_or_requester)
         await service.tellraw(
             server_name,
             player_name,
@@ -58,6 +59,15 @@ async def _tpa(server_name: str, player_name: str, args: str) -> None:
                 result.to_requester,
                 "red",
             )
+        return
+
+    if len(tokens) > 1:
+        await service.tellraw(
+            server_name,
+            player_name,
+            f"参数传递错误\n{service.tpa_usage()}",
+            "yellow",
+        )
         return
 
     ok, msg = await service.request_tp(server_name, player_name, action)

@@ -15,8 +15,8 @@ from ..helpers.ingame_cmd import read_ingame_prefix
 from ..helpers.player_online import is_player_online
 from ..waypoint.service import tellraw
 
-# key: (server_name, target_player) —— 每个目标同时只保留一条，新的覆盖旧的
-_pending: Dict[Tuple[str, str], "TpaRequest"] = {}
+# key: (server_name, target_player, requester_player)
+_pending: Dict[Tuple[str, str, str], "TpaRequest"] = {}
 
 
 def _tpa_timeout() -> float:
@@ -30,8 +30,8 @@ def _tpa_timeout() -> float:
 def tpa_usage() -> str:
     return (
         "用法: tpa <目标玩家>\n"
-        "同意: tpa accept | tpa 同意\n"
-        "拒绝: tpa deny | tpa 拒绝"
+        "同意: tpa accept [玩家名] | tpa 同意 [玩家名]\n"
+        "拒绝: tpa deny [玩家名] | tpa 拒绝 [玩家名]"
     )
 
 
@@ -48,18 +48,34 @@ def _is_expired(req: TpaRequest, now: Optional[float] = None) -> bool:
     return ts - req.created_at > _tpa_timeout()
 
 
-def _pop_pending(server_name: str, target: str) -> Optional[TpaRequest]:
-    key = (server_name, target.lower())
-    req = _pending.pop(key, None)
-    if req is None:
+def _pop_pending(
+    server_name: str, target: str, requester: Optional[str] = None
+) -> Optional[TpaRequest]:
+    target_key = target.lower()
+    now = time.time()
+    # 清理过期请求
+    expired_keys = [k for k, r in _pending.items() if _is_expired(r, now)]
+    for k in expired_keys:
+        _pending.pop(k, None)
+
+    if requester:
+        return _pending.pop((server_name, target_key, requester.lower()), None)
+
+    candidates = [
+        (k, r)
+        for k, r in _pending.items()
+        if k[0] == server_name and k[1] == target_key
+    ]
+    if not candidates:
         return None
-    if _is_expired(req):
-        return None
-    return req
+    candidates.sort(key=lambda item: item[1].created_at, reverse=True)
+    best_key, best_req = candidates[0]
+    _pending.pop(best_key, None)
+    return best_req
 
 
 def _put_pending(server_name: str, requester: str, target: str) -> TpaRequest:
-    key = (server_name, target.lower())
+    key = (server_name, target.lower(), requester.lower())
     _pending.pop(key, None)
     req = TpaRequest(
         server_name=server_name,
@@ -73,8 +89,8 @@ def _put_pending(server_name: str, requester: str, target: str) -> TpaRequest:
 
 def build_request_components(requester: str) -> List[dict]:
     prefix = read_ingame_prefix()
-    accept_cmd = f"{prefix}tpa accept"
-    deny_cmd = f"{prefix}tpa deny"
+    accept_cmd = f"{prefix}tpa accept {requester}"
+    deny_cmd = f"{prefix}tpa deny {requester}"
     timeout = _tpa_timeout()
     return [
         {"text": f"[TPA] {requester} ", "color": "yellow"},
@@ -121,9 +137,13 @@ async def request_tp(server_name: str, requester: str, target: str) -> Tuple[boo
     return True, f"已向 {target} 发送传送申请，等待对方同意"
 
 
-async def accept_tp(server_name: str, target_player: str) -> Tuple[bool, str]:
-    req = _pop_pending(server_name, target_player)
+async def accept_tp(
+    server_name: str, target_player: str, requester_name: Optional[str] = None
+) -> Tuple[bool, str]:
+    req = _pop_pending(server_name, target_player, requester_name)
     if req is None:
+        if requester_name:
+            return False, f"未找到来自 {requester_name} 的待处理传送申请（可能已过期或已被处理）"
         return False, "当前没有待处理的传送申请（可能已过期或已被处理）"
 
     if not await is_player_online(server_name, req.requester):
@@ -161,12 +181,19 @@ class DenyResult:
     to_requester: Optional[str] = None
 
 
-async def deny_tp(server_name: str, target_player: str) -> DenyResult:
-    req = _pop_pending(server_name, target_player)
+async def deny_tp(
+    server_name: str, target_player: str, requester_name: Optional[str] = None
+) -> DenyResult:
+    req = _pop_pending(server_name, target_player, requester_name)
     if req is None:
+        msg = (
+            f"未找到来自 {requester_name} 的待处理传送申请（可能已过期或已被处理）"
+            if requester_name
+            else "当前没有待处理的传送申请（可能已过期或已被处理）"
+        )
         return DenyResult(
             ok=False,
-            to_target="当前没有待处理的传送申请（可能已过期或已被处理）",
+            to_target=msg,
         )
     logger.info(
         f"[MC·TPA] [{server_name}] {req.target} 拒绝 {req.requester} 的传送申请"
