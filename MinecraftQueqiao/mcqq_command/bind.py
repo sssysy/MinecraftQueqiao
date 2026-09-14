@@ -4,6 +4,7 @@ from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
 from ..mcqq_database import MCQQBind
+from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
 from ..utils.helpers.server_resolve import resolve_servers
 
 sv_mcqq_bind = SV("鹊桥群服相关指令")
@@ -11,20 +12,24 @@ sv_mcqq_bind = SV("鹊桥群服相关指令")
 
 @sv_mcqq_bind.on_command("群服绑定", block=True)
 async def bind_server(bot: Bot, ev: Event) -> None:
-    # 仅在群聊中执行绑定
     if ev.user_type != "group" or not ev.group_id:
+        await bot.send("请在群聊中发送 mc群服绑定 <服务器> 指令")
+        return
+
+    tokens = split_cmd_args(ev.text)
+    if len(tokens) != 1:
         await bot.send(
-            "请在群聊中发送 mc群服绑定<服务器> 指令"
+            "参数传递错误\n用法：mc群服绑定 <服务器>\n例如：mc群服绑定 香草纪元"
         )
         return
 
-    servers, err = await resolve_servers(ev.text)
+    servers, err = await resolve_servers(decode_arg(tokens[0]))
     if err:
         await bot.send(err)
         return
-    if servers is None or len(servers) != 1:
+    if not servers or len(servers) != 1:
         await bot.send(
-            "请指定一个服务器\n用法：mc群服绑定<服务器>\n例如：mc群服绑定香草纪元"
+            "请指定一个服务器\n用法：mc群服绑定 <服务器>\n例如：mc群服绑定 香草纪元"
         )
         return
     server = servers[0]
@@ -69,23 +74,24 @@ async def bind_server(bot: Bot, ev: Event) -> None:
 
 @sv_mcqq_bind.on_command("群服解绑", block=True)
 async def unbind_server(bot: Bot, ev: Event) -> None:
-    # 仅在群聊中执行解绑
     if ev.user_type != "group" or not ev.group_id:
-        await bot.send("请在群聊中发送 mc群服解绑 指令")
+        await bot.send("请在群聊中发送 mc群服解绑 <服务器> 指令")
         return
 
-    server_id_text = ev.text.strip()
-    if not server_id_text:
-        await bot.send("格式错误！\n用法：mc群服解绑<服务器>\n例如：mc群服解绑香草纪元")
+    tokens = split_cmd_args(ev.text)
+    if len(tokens) != 1:
+        await bot.send(
+            "参数传递错误\n用法：mc群服解绑 <服务器>\n例如：mc群服解绑 香草纪元"
+        )
         return
 
-    servers, err = await resolve_servers(server_id_text)
+    servers, err = await resolve_servers(decode_arg(tokens[0]))
     if err:
         await bot.send(err)
         return
-    if servers is None or len(servers) != 1:
+    if not servers or len(servers) != 1:
         await bot.send(
-            "请指定一个服务器\n用法：mc群服解绑<服务器>\n例如：mc群服解绑香草纪元"
+            "请指定一个服务器\n用法：mc群服解绑 <服务器>\n例如：mc群服解绑 香草纪元"
         )
         return
     server = servers[0]

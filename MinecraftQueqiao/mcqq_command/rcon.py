@@ -8,11 +8,11 @@ from gsuid_core.sv import SV
 from ..mcqq_config import mcqq_config
 from ..mcqq_core.api import send_rcon_command
 from ..mcqq_database import MCQQServer, MCQQRconWhitelist
-from ..utils.helpers.admin import is_admin, parse_rcon_admin_args
+from ..utils.helpers.arg_parse import decode_arg, split_cmd_args, split_user_ids
+from ..utils.helpers.admin import is_admin
 from ..utils.helpers.prefix_rules import is_command_blacklisted
 from ..utils.helpers.server_resolve import (
     get_group_target_servers,
-    parse_optional_servers,
     resolve_servers,
 )
 from ..utils.helpers.user_name import resolve_user_name
@@ -27,17 +27,28 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
         await bot.send("请在群聊中使用 mcrcon <指令>")
         return
 
-    text = ev.text.strip()
-    if not text:
-        await bot.send("用法：mcrcon <指令>")
+    tokens = split_cmd_args(ev.text)
+    if not tokens:
+        await bot.send("用法：mcrcon [服务器] <指令>")
         return
 
-    servers, command, err = await parse_optional_servers(text)
-    if err:
-        await bot.send(err)
-        return
+    servers: Optional[List[MCQQServer]] = None
+    # 首 token 是服务器则吃掉，其余全部是指令（允许空格）
+    if len(tokens) >= 2:
+        resolved, err = await resolve_servers(tokens[0])
+        if resolved:
+            servers = resolved
+            command = " ".join(decode_arg(t) for t in tokens[1:])
+        elif err and err.startswith("有多个"):
+            await bot.send(err)
+            return
+        else:
+            command = " ".join(decode_arg(t) for t in tokens)
+    else:
+        command = decode_arg(tokens[0])
+
     if not command:
-        await bot.send("未提供指令\n用法：mcrcon <指令>")
+        await bot.send("未提供指令\n用法：mcrcon [服务器] <指令>")
         return
 
     blacklist = mcqq_config.get_config("command_blacklist").data
@@ -84,20 +95,69 @@ async def _resolve_admin_targets(
     return None
 
 
+async def _parse_admin_args(
+    bot: Bot, ev: Event, usage: str
+) -> Optional[tuple[Optional[List[MCQQServer]], List[str]]]:
+    """[服务器] <用户QQ[,用户QQ]|@用户>。多用户用逗号；@ 可多个。"""
+    from ..utils.helpers.user_select import extract_at_user_ids
+
+    at_users = extract_at_user_ids(ev)
+    tokens = split_cmd_args(ev.text)
+    servers: Optional[List[MCQQServer]] = None
+    user_ids: List[str] = list(at_users)
+
+    if at_users:
+        # 有 @ 时：可选服务器为唯一 token
+        if len(tokens) > 1:
+            await bot.send(f"参数传递错误\n用法：{usage}")
+            return None
+        if tokens:
+            resolved, err = await resolve_servers(tokens[0])
+            if err or not resolved:
+                await bot.send(err or f"未找到服务器 {tokens[0]}")
+                return None
+            servers = resolved
+    else:
+        if not tokens:
+            await bot.send(f"未检测到目标用户\n用法：{usage}")
+            return None
+        if len(tokens) == 1:
+            user_ids.extend(split_user_ids(tokens[0]))
+        elif len(tokens) == 2:
+            resolved, err = await resolve_servers(tokens[0])
+            if err or not resolved:
+                await bot.send(err or f"未找到服务器 {tokens[0]}")
+                return None
+            servers = resolved
+            user_ids.extend(split_user_ids(tokens[1]))
+        else:
+            await bot.send(
+                f"参数传递错误，多用户请用逗号分隔\n用法：{usage}"
+            )
+            return None
+
+    # 去重保序
+    seen: set[str] = set()
+    unique: List[str] = []
+    for uid in user_ids:
+        if uid not in seen:
+            seen.add(uid)
+            unique.append(uid)
+    return servers, unique
+
+
 @sv_mcqq_rcon_admin.on_command(("增加rcon管理员", "添加rcon管理员"), block=True)
 async def add_rcon_admin(bot: Bot, ev: Event) -> None:
-    servers, user_ids, err = await parse_rcon_admin_args(ev)
-    if err:
-        await bot.send(err)
+    usage = "mc增加rcon管理员 [服务器] <@用户|QQ号[,QQ号]>"
+    parsed = await _parse_admin_args(bot, ev, usage)
+    if parsed is None:
         return
-    if not user_ids:
-        await bot.send("未检测到目标用户\n用法：mc增加rcon管理员 <@用户>")
-        return
+    servers, user_ids = parsed
 
     targets = await _resolve_admin_targets(bot, ev, servers)
     if targets is None:
         if ev.user_type != "group" and servers is None:
-            await bot.send("请指定服务器\n例如：mc增加rcon管理员 生存服 12345678")
+            await bot.send(f"请指定服务器\n例如：{usage}")
         return
 
     results = []
@@ -123,18 +183,16 @@ async def add_rcon_admin(bot: Bot, ev: Event) -> None:
 
 @sv_mcqq_rcon_admin.on_command(("删除rcon管理员", "移除rcon管理员"), block=True)
 async def delete_rcon_admin(bot: Bot, ev: Event) -> None:
-    servers, user_ids, err = await parse_rcon_admin_args(ev)
-    if err:
-        await bot.send(err)
+    usage = "mc删除rcon管理员 [服务器] <@用户|QQ号[,QQ号]>"
+    parsed = await _parse_admin_args(bot, ev, usage)
+    if parsed is None:
         return
-    if not user_ids:
-        await bot.send("未检测到目标用户\n用法：mc删除rcon管理员 <@用户>")
-        return
+    servers, user_ids = parsed
 
     targets = await _resolve_admin_targets(bot, ev, servers)
     if targets is None:
         if ev.user_type != "group" and servers is None:
-            await bot.send("请指定服务器\n例如：mc删除rcon管理员 生存服 12345678")
+            await bot.send(f"请指定服务器\n例如：{usage}")
         return
 
     results = []
@@ -163,12 +221,15 @@ async def delete_rcon_admin(bot: Bot, ev: Event) -> None:
     block=True,
 )
 async def list_rcon_admin(bot: Bot, ev: Event) -> None:
-    text = ev.text.strip()
+    tokens = split_cmd_args(ev.text)
     servers: Optional[List[MCQQServer]] = None
-    if text:
-        resolved, err = await resolve_servers(text)
-        if err:
-            await bot.send(err)
+    if len(tokens) > 1:
+        await bot.send("参数传递错误\n用法：mc查看rcon管理员 [服务器]")
+        return
+    if tokens:
+        resolved, err = await resolve_servers(tokens[0])
+        if err or not resolved:
+            await bot.send(err or f"未找到服务器 {tokens[0]}")
             return
         servers = resolved
 

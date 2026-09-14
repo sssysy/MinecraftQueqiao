@@ -101,16 +101,20 @@ async def add_server_command(bot: Bot, ev: Event) -> None:
 
 @sv_mcqq_server_manage.on_command("删除服务器", block=True)
 async def delete_server_command(bot: Bot, ev: Event) -> None:
-    server_text = ev.text.strip()
-    if not server_text:
-        await bot.send("格式错误！\n用法：mc删除服务器 <服务器>\n例如：mc删除服务器 香草纪元")
+    from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
+
+    tokens = split_cmd_args(ev.text)
+    if len(tokens) != 1:
+        await bot.send(
+            "参数传递错误\n用法：mc删除服务器 <服务器>\n例如：mc删除服务器 香草纪元"
+        )
         return
 
-    servers, err = await resolve_servers(server_text)
+    servers, err = await resolve_servers(decode_arg(tokens[0]))
     if err:
         await bot.send(err)
         return
-    if servers is None or len(servers) != 1:
+    if not servers or len(servers) != 1:
         await bot.send(
             "未找到服务器 / 服务器名称冲突！\n请通过服务器内部名称删除"
         )

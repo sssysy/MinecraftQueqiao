@@ -10,7 +10,12 @@ from ...mcqq_database import MCQQBind, MCQQServer
 async def resolve_servers(
     text: str,
 ) -> Tuple[Optional[List[MCQQServer]], Optional[str]]:
-    """解析服务器选择文本。返回 (servers, err)。err 非空必须打断，不得静默回退。"""
+    """解析服务器选择文本。返回 (servers, err)。
+
+    - 命中唯一服务器 → ([server], None)
+    - 外显名歧义 → (None, err) 必须打断
+    - 未找到 / 非法 ID → (None, err)，由调用方决定是否当错误
+    """
     text = text.strip()
     if not text:
         return None, None
@@ -73,26 +78,3 @@ async def get_group_target_servers(
 ) -> List[MCQQServer]:
     group_servers = await get_group_servers(group_id, only_enabled=True)
     return filter_by_ids(group_servers, servers)
-
-
-async def parse_optional_servers(
-    text: str,
-) -> Tuple[Optional[List[MCQQServer]], str, Optional[str]]:
-    """可选服务器选择器：首 token 可解析为服务器则吃掉。
-
-    Returns:
-        (servers|None, rest, err)
-        servers 为 None 表示未指定服务器（走群绑定）。err 非空必须打断。
-    """
-    text = text.strip()
-    if not text:
-        return None, "", None
-
-    parts = text.split(maxsplit=1)
-    first, rest = parts[0], parts[1] if len(parts) > 1 else ""
-    resolved, err = await resolve_servers(first)
-    if err:
-        return None, text, err
-    if resolved:
-        return resolved, rest.strip(), None
-    return None, text, None

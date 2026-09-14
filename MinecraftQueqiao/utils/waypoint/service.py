@@ -89,35 +89,6 @@ async def get_player_pos(
     return (x, y, z, dimension)
 
 
-def parse_waypoint_args(
-    raw_text: str, current_pos: Tuple[float, float, float]
-) -> Tuple[str, float, float, float]:
-    tokens = raw_text.strip().split(" ")
-    if not tokens or not tokens[0].strip():
-        raise ValueError("路径点名称不能为空")
-
-    point_name = tokens[0].strip()
-    curr_x, curr_y, curr_z = current_pos
-
-    def _parse_coord(val: str, default: float, name: str) -> float:
-        val_clean = val.strip()
-        if not val_clean:
-            return default
-        try:
-            return round(float(val_clean), 1)
-        except ValueError:
-            raise ValueError(f"坐标 {name} 必须为数字，输入为: '{val_clean}'")
-
-    val_x = tokens[1] if len(tokens) > 1 else ""
-    val_y = tokens[2] if len(tokens) > 2 else ""
-    val_z = tokens[3] if len(tokens) > 3 else ""
-
-    x = _parse_coord(val_x, curr_x, "X")
-    y = _parse_coord(val_y, curr_y, "Y")
-    z = _parse_coord(val_z, curr_z, "Z")
-    return point_name, x, y, z
-
-
 async def execute_teleport(
     server_name: str,
     player_name: str,
@@ -156,19 +127,54 @@ async def get_point(
     return await MCQQWaypoint.get_point(server_name, point_name, player_name)
 
 
+def build_point_from_tokens(
+    tokens: list[str],
+    current_pos: Tuple[float, float, float],
+) -> Tuple[str, float, float, float]:
+    """tokens[0]=名，[1..3]=x y z（可省）。tokens 已 decode。"""
+    if not tokens:
+        raise ValueError("路径点名称不能为空")
+    if len(tokens) > 4:
+        raise ValueError("参数传递错误，需要参数：路径点名称、x、y、z（坐标可省略）")
+
+    point_name = tokens[0]
+    curr_x, curr_y, curr_z = current_pos
+
+    def _parse_coord(val: str, default: float, name: str) -> float:
+        val_clean = val.strip()
+        if not val_clean:
+            return default
+        try:
+            return round(float(val_clean), 1)
+        except ValueError:
+            raise ValueError(f"坐标 {name} 必须为数字，输入为: '{val_clean}'")
+
+    val_x = tokens[1] if len(tokens) > 1 else ""
+    val_y = tokens[2] if len(tokens) > 2 else ""
+    val_z = tokens[3] if len(tokens) > 3 else ""
+    return (
+        point_name,
+        _parse_coord(val_x, curr_x, "X"),
+        _parse_coord(val_y, curr_y, "Y"),
+        _parse_coord(val_z, curr_z, "Z"),
+    )
+
+
 async def add_point(
     server_name: str,
     player_name: str,
-    args: str,
+    tokens: list[str],
     *,
     is_global: bool,
     curr_pos: Tuple[float, float, float, str],
 ) -> Tuple[bool, str]:
     curr_x, curr_y, curr_z, curr_dim = curr_pos
     try:
-        point_name, x, y, z = parse_waypoint_args(args, (curr_x, curr_y, curr_z))
+        point_name, x, y, z = build_point_from_tokens(
+            tokens, (curr_x, curr_y, curr_z)
+        )
     except ValueError as e:
-        return False, f"参数错误: {e}"
+        return False, str(e)
 
     await MCQQWaypoint.add_or_update(
         server_name=server_name,

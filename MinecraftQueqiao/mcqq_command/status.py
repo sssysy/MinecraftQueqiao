@@ -6,6 +6,7 @@ from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
 from ..mcqq_database import MCQQServer
+from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
 from ..utils.helpers.server_resolve import get_group_target_servers, resolve_servers
 from ..utils.helpers.server_status import (
     get_address_status_text,
@@ -20,28 +21,32 @@ sv_mcqq_status = SV("鹊桥服务器状态指令")
     ("服务器", "服务器状态"),
     block=True,
     to_ai="""查询当前 Minecraft 服务器的运行状态。
-当用户询问服务器是否在线、服务器挂了吗、当前在线人数、在线玩家列表、服务器地址或延迟时调用。
 
 Args:
-    text: 可选。指定服务器名称或 IP；留空则查询当前群绑定的所有服务器。
+    text: 可选。服务器名称或 IP（单个参数，IP 可含端口）。留空查当前群绑定服务器。
 """,
 )
 async def status_command(bot: Bot, ev: Event) -> None:
-    text = ev.text.strip()
-    servers: Optional[List[MCQQServer]] = None
+    tokens = split_cmd_args(ev.text)
+    if len(tokens) > 1:
+        await bot.send(
+            "参数传递错误\n用法：mc服务器 [服务器名|IP:端口]"
+        )
+        return
 
-    if text:
+    servers: Optional[List[MCQQServer]] = None
+    if tokens:
+        text = decode_arg(tokens[0])
         resolved, err = await resolve_servers(text)
         if resolved:
             servers = resolved
-        else:
-            if is_server_address(text):
-                res = await get_address_status_text(text)
-                await bot.send(res)
-                return
-            if err:
-                await bot.send(err)
-                return
+        elif is_server_address(text):
+            res = await get_address_status_text(text)
+            await bot.send(res)
+            return
+        elif err:
+            await bot.send(err)
+            return
 
     if servers is not None:
         targets = servers

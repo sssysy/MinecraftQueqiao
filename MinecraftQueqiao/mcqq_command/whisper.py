@@ -7,6 +7,7 @@ from gsuid_core.sv import SV
 
 from ..mcqq_core.api import send_private_msg
 from ..mcqq_database import MCQQServer, MCQQUserBind
+from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
 from ..utils.helpers.component import parse_text_or_json_component
 from ..utils.helpers.server_resolve import get_group_servers
 from ..utils.helpers.user_select import extract_at_user_ids
@@ -17,50 +18,52 @@ sv_mcqq_whisper = SV("鹊桥私聊指令")
 async def _parse_whisper_args(
     ev: Event,
 ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
-    raw_text = ev.text.strip()
-
+    """@目标 | 游戏名|QQ号  +  内容（各为一个 token，空格用 \\+）。"""
+    tokens = split_cmd_args(ev.text)
     at_users = extract_at_user_ids(ev)
+
     if at_users:
-        target_uid = at_users[0]
-        content = raw_text
-        if not content:
-            return None, None, "私聊内容不能为空，请提供要发送的文本"
-        user_bind = await MCQQUserBind.get_by_user_id(target_uid)
+        if len(tokens) != 1:
+            return (
+                None,
+                None,
+                "参数传递错误\n用法：mc私聊 @用户 <内容>（内容空格请用 \\+）",
+            )
+        content = decode_arg(tokens[0])
+        user_bind = await MCQQUserBind.get_by_user_id(at_users[0])
         if not user_bind:
             return (
                 None,
                 None,
-                f"目标用户 {target_uid} 尚未绑定 MC 游戏角色，无法发送私聊。请直接使用游戏内名称",
+                f"目标用户 {at_users[0]} 尚未绑定 MC 游戏角色，无法发送私聊。请直接使用游戏内名称",
             )
         return user_bind.player_name, content, None
 
-    parts = raw_text.split(maxsplit=1)
-    if len(parts) < 2:
+    if len(tokens) != 2:
         return (
             None,
             None,
-            "用法：mc私聊 <游戏名> <私聊内容>\n例如：mc私聊 @张三 你好呀",
+            "参数传递错误\n用法：mc私聊 <游戏名|QQ号> <内容>（内容空格请用 \\+）\n"
+            "例如：mc私聊 Notch 来\\+我家",
         )
 
-    first_token = parts[0].strip().lstrip("@")
-    content = parts[1].strip()
-    if not content:
-        return None, None, "私聊内容不能为空，请提供要发送的文本"
+    target_raw = decode_arg(tokens[0]).lstrip("@")
+    content = decode_arg(tokens[1])
 
-    if first_token.isdigit():
-        user_bind = await MCQQUserBind.get_by_user_id(first_token)
+    if target_raw.isdigit():
+        user_bind = await MCQQUserBind.get_by_user_id(target_raw)
         if not user_bind:
             return (
                 None,
                 None,
-                f"目标用户 {first_token} 尚未绑定 MC 游戏角色，无法发送私聊。请直接使用游戏内名称",
+                f"目标用户 {target_raw} 尚未绑定 MC 游戏角色，无法发送私聊。请直接使用游戏内名称",
             )
         return user_bind.player_name, content, None
 
-    user_bind = await MCQQUserBind.get_by_player_name(first_token)
+    user_bind = await MCQQUserBind.get_by_player_name(target_raw)
     if user_bind and user_bind.player_name:
         return user_bind.player_name, content, None
-    return first_token, content, None
+    return target_raw, content, None
 
 
 async def _get_target_servers(ev: Event) -> Tuple[List[MCQQServer], Optional[str]]:
@@ -79,10 +82,10 @@ async def _get_target_servers(ev: Event) -> Tuple[List[MCQQServer], Optional[str
     ("私聊", "私信"),
     block=True,
     to_ai="""向 Minecraft 服务器内正在游玩的指定玩家发送游戏内私信。
-仅当用户明确表示要向服务器内的某位玩家发消息/传话时调用。
+仅当用户明确表示要向服务器内的某位玩家发消息时调用。
 
 Args:
-    text: 格式为 "<目标玩家名或QQ号> <私聊文本内容>"。
+    text: 格式 "<目标玩家名或QQ号> <私聊内容>"，空格用 \\+。
 """,
 )
 async def whisper_command(bot: Bot, ev: Event) -> None:

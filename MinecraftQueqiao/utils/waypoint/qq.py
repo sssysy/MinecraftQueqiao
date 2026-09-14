@@ -9,8 +9,8 @@ from gsuid_core.ai_core.trigger_bridge import ai_return
 from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 
-from ...mcqq_config import mcqq_config
 from ...mcqq_database import MCQQServer
+from ..helpers.arg_parse import parse_positional
 from ..helpers.admin import is_admin
 from . import service
 
@@ -30,7 +30,6 @@ async def resolve_tp_context(
     *,
     need_online: bool = True,
 ) -> Optional[TpContext]:
-    """失败时已发送错误文案并返回 None。"""
     if not service.tp_enabled():
         await bot.send("未启用传送功能")
         return None
@@ -69,14 +68,9 @@ async def handle_list_waypoint(bot: Bot, ev: Event) -> None:
     await bot.send(service.format_point_list(points))
 
 
-async def handle_teleport(bot: Bot, ev: Event) -> None:
+async def handle_teleport(bot: Bot, ev: Event, point_name: str) -> None:
     ctx = await resolve_tp_context(bot, ev, need_online=True)
     if not ctx:
-        return
-
-    point_name = ev.text.strip()
-    if not point_name:
-        await bot.send("用法：mctp <路径点名称>")
         return
 
     ok, msg = await service.teleport_to(
@@ -91,6 +85,19 @@ async def handle_teleport(bot: Bot, ev: Event) -> None:
 
 
 async def handle_add_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
+    cmd_name = "增加全局tp" if is_global else "增加tp"
+    usage = f"用法：mc{cmd_name} <路径点名称> [x] [y] [z]"
+
+    args, err = parse_positional(
+        ev.text,
+        min_args=1,
+        max_args=4,
+        names=("路径点名称", "x", "y", "z"),
+    )
+    if err:
+        await bot.send(f"{err}\n{usage}")
+        return
+
     if not service.tp_enabled():
         await bot.send("未启用传送功能")
         return
@@ -101,12 +108,6 @@ async def handle_add_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
     player_name = await service.get_bound_player_by_user_id(ev.user_id)
     if not player_name:
         await bot.send("您尚未绑定 MC 游戏角色，请先发送 mc绑定 <游戏ID> 进行绑定")
-        return
-
-    raw_args = ev.text.strip()
-    if not raw_args:
-        cmd_name = "增加全局tp" if is_global else "增加tp"
-        await bot.send(f"用法：mc{cmd_name} <路径点名称> [x] [y] [z]")
         return
 
     server, pos, err = await service.resolve_active_server(
@@ -129,14 +130,16 @@ async def handle_add_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
     ok, msg = await service.add_point(
         server.server_name,
         player_name,
-        raw_args,
+        args,
         is_global=is_global,
         curr_pos=pos,
     )
     await bot.send(msg if ok else f"参数错误！\n{msg}")
 
 
-async def handle_delete_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
+async def handle_delete_waypoint(
+    bot: Bot, ev: Event, is_global: bool, point_name: str
+) -> None:
     if not service.tp_enabled():
         await bot.send("未启用传送功能")
         return
@@ -147,12 +150,6 @@ async def handle_delete_waypoint(bot: Bot, ev: Event, is_global: bool) -> None:
     player_name = await service.get_bound_player_by_user_id(ev.user_id)
     if not player_name:
         await bot.send("您尚未绑定 MC 游戏角色，请先发送 mc绑定 <游戏ID> 进行绑定")
-        return
-
-    point_name = ev.text.strip()
-    if not point_name:
-        cmd_name = "删除全局tp" if is_global else "删除tp"
-        await bot.send(f"用法：mc{cmd_name} <路径点名称>")
         return
 
     server, _, err = await service.resolve_active_server(
