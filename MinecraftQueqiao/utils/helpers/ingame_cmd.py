@@ -6,7 +6,7 @@ from typing import Awaitable, Callable, List, Tuple
 
 from gsuid_core.logger import logger
 
-from ..mcqq_config import mcqq_config
+from ...mcqq_config import mcqq_config
 
 IngameHandler = Callable[[str, str, str], Awaitable[None]]
 

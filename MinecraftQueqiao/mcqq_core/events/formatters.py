@@ -7,7 +7,7 @@ from typing import Any, Callable, Optional
 from gsuid_core.logger import logger
 
 from ...mcqq_config import mcqq_config
-from ..utils.helpers.prefix_rules import match_and_trim_prefix
+from ...utils.helpers.prefix_rules import match_and_trim_prefix
 
 # 订阅配置里的中文标签
 EVENT_LABEL = {
