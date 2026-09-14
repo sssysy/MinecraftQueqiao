@@ -7,7 +7,7 @@ from gsuid_core.sv import SV
 from ..mcqq_core.api import send_action_bar, send_broadcast, send_title
 from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
 from ..utils.helpers.component import parse_text_or_json_component
-from ..utils.helpers.server_resolve import get_group_target_servers, resolve_servers
+from ..utils.helpers.server_resolve import resolve_group_targets, resolve_servers
 
 sv_mcqq_broadcast = SV("鹊桥广播与公告指令", pm=3)
 
@@ -15,16 +15,16 @@ sv_mcqq_broadcast = SV("鹊桥广播与公告指令", pm=3)
 async def _resolve_push_args(
     bot: Bot, ev: Event, text: str, usage: str
 ) -> Optional[tuple[list, str]]:
-    """[服务器] 正文。1 参=正文；2 参=服务器+正文；更多=参数错误。"""
+    """[服务器] 正文。1 参=正文（主服务器）；2 参=服务器+正文；更多=参数错误。"""
     tokens = split_cmd_args(text)
     if not tokens:
         await bot.send(f"用法：mc{usage} [服务器] <内容>")
         return None
 
     if len(tokens) == 1:
-        targets = await get_group_target_servers(ev.group_id or "", None)
-        if not targets:
-            await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
+        targets, err = await resolve_group_targets(ev.group_id or "", None)
+        if err or not targets:
+            await bot.send(err or "当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
             return None
         return targets, decode_arg(tokens[0])
 
@@ -33,9 +33,9 @@ async def _resolve_push_args(
         if err or not servers:
             await bot.send(err or f"未找到服务器 {tokens[0]}")
             return None
-        targets = await get_group_target_servers(ev.group_id or "", servers)
-        if not targets:
-            await bot.send("当前群未绑定该服务器")
+        targets, err = await resolve_group_targets(ev.group_id or "", servers)
+        if err or not targets:
+            await bot.send(err or "当前群未绑定该服务器")
             return None
         return targets, decode_arg(tokens[1])
 

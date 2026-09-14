@@ -9,7 +9,7 @@ from ..mcqq_core.api import send_private_msg
 from ..mcqq_database import MCQQServer, MCQQUserBind
 from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
 from ..utils.helpers.component import parse_text_or_json_component
-from ..utils.helpers.server_resolve import get_group_servers
+from ..utils.helpers.server_resolve import get_group_main_server
 from ..utils.helpers.user_select import extract_at_user_ids
 
 sv_mcqq_whisper = SV("鹊桥私聊指令")
@@ -68,10 +68,10 @@ async def _parse_whisper_args(
 
 async def _get_target_servers(ev: Event) -> Tuple[List[MCQQServer], Optional[str]]:
     if ev.user_type == "group" and ev.group_id:
-        servers = await get_group_servers(ev.group_id, only_enabled=True)
-        if not servers:
-            return [], "当前群未绑定任何可用的 MC 服务器，请先使用 mc群服绑定 指令"
-        return servers, None
+        server, err = await get_group_main_server(ev.group_id)
+        if err or server is None:
+            return [], err or "当前群未绑定任何可用的 MC 服务器，请先使用 mc群服绑定 指令"
+        return [server], None
     servers = await MCQQServer.get_all_enabled()
     if not servers:
         return [], "当前未配置任何启用的 MC 服务器"

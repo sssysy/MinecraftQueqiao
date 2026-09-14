@@ -12,7 +12,7 @@ from ..utils.helpers.arg_parse import decode_arg, split_cmd_args, split_user_ids
 from ..utils.helpers.admin import is_admin
 from ..utils.helpers.prefix_rules import is_command_blacklisted
 from ..utils.helpers.server_resolve import (
-    get_group_target_servers,
+    resolve_group_targets,
     resolve_servers,
 )
 from ..utils.helpers.user_name import resolve_user_name
@@ -56,9 +56,9 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
         await bot.send("黑名单指令！")
         return
 
-    targets = await get_group_target_servers(ev.group_id, servers)
-    if not targets:
-        await bot.send("当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
+    targets, err = await resolve_group_targets(ev.group_id, servers)
+    if err or not targets:
+        await bot.send(err or "当前群未绑定任何服务器，请先使用 mc群服绑定 指令")
         return
 
     results = []
@@ -87,9 +87,9 @@ async def _resolve_admin_targets(
     if servers is not None:
         return servers
     if ev.user_type == "group" and ev.group_id:
-        targets = await get_group_target_servers(ev.group_id, None)
-        if not targets:
-            await bot.send("当前群未绑定任何服务器")
+        targets, err = await resolve_group_targets(ev.group_id, None)
+        if err or not targets:
+            await bot.send(err or "当前群未绑定任何服务器")
             return None
         return targets
     return None
@@ -236,10 +236,11 @@ async def list_rcon_admin(bot: Bot, ev: Event) -> None:
     if servers is not None:
         targets = servers
     elif ev.user_type == "group" and ev.group_id:
-        targets = await get_group_target_servers(ev.group_id, None)
-        if not targets:
-            await bot.send("当前群未绑定任何服务器")
+        resolved, err = await resolve_group_targets(ev.group_id, None)
+        if err or not resolved:
+            await bot.send(err or "当前群未绑定任何服务器")
             return
+        targets = resolved
     else:
         targets = await MCQQServer.get_all_enabled()
         if not targets:

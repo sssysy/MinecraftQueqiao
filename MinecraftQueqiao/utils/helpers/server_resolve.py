@@ -1,10 +1,21 @@
-"""服务器解析：ID / 内部名 / 外显名；群绑定目标服；可选选择器。"""
+"""服务器解析：ID / 内部名 / 外显名；群绑定目标服；主服务器默认。"""
 
 from __future__ import annotations
 
 from typing import List, Optional, Tuple
 
 from ...mcqq_database import MCQQBind, MCQQServer
+
+ERR_NO_BIND = "当前群未绑定任何服务器，请先使用 mc群服绑定 <服务器>"
+ERR_NO_MAIN = (
+    "当前群绑定异常，无法找到主服务器，"
+    "请使用 mc切换主服务器 <服务器> 进行设置"
+)
+ERR_MULTI_MAIN = (
+    "当前群绑定异常，检测到多个主服务器，"
+    "请使用 mc切换主服务器 <服务器> 修正"
+)
+ERR_NOT_BOUND = "当前群未绑定该服务器"
 
 
 async def resolve_servers(
@@ -68,17 +79,53 @@ async def get_group_servers(
     return servers
 
 
-def filter_by_ids(
-    servers: List[MCQQServer], selected: Optional[List[MCQQServer]]
-) -> List[MCQQServer]:
-    if selected is None:
-        return list(servers)
-    selected_ids = {s.id for s in selected}
-    return [s for s in servers if s.id in selected_ids]
+async def _load_bind_server(bind: MCQQBind) -> Optional[MCQQServer]:
+    server = None
+    if bind.server_id:
+        server = await MCQQServer.get_by_id(bind.server_id)
+    if server is None and bind.server_name:
+        server = await MCQQServer.get_by_name(bind.server_name)
+    return server
 
 
-async def get_group_target_servers(
-    group_id: str, servers: Optional[List[MCQQServer]] = None
-) -> List[MCQQServer]:
-    group_servers = await get_group_servers(group_id, only_enabled=True)
-    return filter_by_ids(group_servers, servers)
+async def get_group_main_server(
+    group_id: str,
+) -> Tuple[Optional[MCQQServer], Optional[str]]:
+    """取该群唯一主服务器。返回 (server, err)。"""
+    binds = await MCQQBind.get_by_group_id(group_id)
+    if not binds:
+        return None, ERR_NO_BIND
+
+    mains = [b for b in binds if b.is_main]
+    if len(mains) == 0:
+        return None, ERR_NO_MAIN
+    if len(mains) > 1:
+        return None, ERR_MULTI_MAIN
+
+    server = await _load_bind_server(mains[0])
+    if server is None or not server.enabled:
+        return None, ERR_NO_MAIN
+    return server, None
+
+
+async def resolve_group_targets(
+    group_id: str,
+    selected: Optional[List[MCQQServer]] = None,
+) -> Tuple[Optional[List[MCQQServer]], Optional[str]]:
+    """命令层统一入口。返回 (servers, err)。
+
+    - selected 非空：与群绑定求交集后返回
+    - selected 为空：取该群主服务器（绝不取全部绑定或随便一台）
+    """
+    if selected:
+        group_servers = await get_group_servers(group_id, only_enabled=True)
+        selected_ids = {s.id for s in selected}
+        targets = [s for s in group_servers if s.id in selected_ids]
+        if not targets:
+            return None, ERR_NOT_BOUND
+        return targets, None
+
+    server, err = await get_group_main_server(group_id)
+    if err or server is None:
+        return None, err or ERR_NO_MAIN
+    return [server], None

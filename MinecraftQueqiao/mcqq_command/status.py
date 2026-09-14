@@ -8,7 +8,7 @@ from gsuid_core.sv import SV
 
 from ..mcqq_database import MCQQServer
 from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
-from ..utils.helpers.server_resolve import get_group_target_servers, resolve_servers
+from ..utils.helpers.server_resolve import resolve_group_targets, resolve_servers
 from ..utils.helpers.server_status import (
     get_address_status_text,
     get_server_status_text,
@@ -52,10 +52,11 @@ async def status_command(bot: Bot, ev: Event) -> None:
     if servers is not None:
         targets = servers
     elif ev.user_type == "group" and ev.group_id:
-        targets = await get_group_target_servers(ev.group_id, None)
-        if not targets:
-            await bot.send("当前群未绑定任何服务器，请手动输入服务器 IP 查询")
+        resolved, err = await resolve_group_targets(ev.group_id, None)
+        if err or not resolved:
+            await bot.send(err or "当前群未绑定任何服务器，请手动输入服务器 IP 查询")
             return
+        targets = resolved
     else:
         targets = await MCQQServer.get_all_enabled()
         if not targets:

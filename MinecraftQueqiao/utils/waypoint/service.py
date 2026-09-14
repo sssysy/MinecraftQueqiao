@@ -10,12 +10,12 @@ from gsuid_core.logger import logger
 from ...mcqq_core.api import send_private_msg, send_rcon_command
 from ...mcqq_config import mcqq_config
 from ...mcqq_database import (
-    MCQQBind,
     MCQQServer,
     MCQQUserBind,
     MCQQWaypoint,
 )
 from ..helpers.player_online import get_player_pos as _get_player_pos
+from ..helpers.server_resolve import get_group_main_server
 
 __all__ = [
     "ActiveServer",
@@ -206,33 +206,15 @@ async def resolve_active_server(
     *,
     need_pos: bool = True,
 ) -> Tuple[Optional[MCQQServer], Optional[Tuple[float, float, float, str]], Optional[str]]:
-    binds = await MCQQBind.get_by_group_id(group_id)
-    if not binds:
-        return None, None, "当前群未绑定任何 MC 服务器，请先执行 mc群服绑定"
-
-    servers: List[MCQQServer] = []
-    for b in binds:
-        s = await MCQQServer.get_by_name(b.server_name)
-        if s and s.enabled and s not in servers:
-            servers.append(s)
-
-    if not servers:
-        return None, None, "无可用服务器"
+    server, err = await get_group_main_server(group_id)
+    if err or server is None:
+        return None, None, err or "无可用服务器"
 
     if not need_pos:
-        return servers[0], None, None
+        return server, None, None
 
-    if len(servers) == 1:
-        s = servers[0]
-        pos_info = await get_player_pos(s.server_name, player_name)
-        return s, pos_info, None
-
-    for s in servers:
-        pos_info = await get_player_pos(s.server_name, player_name)
-        if pos_info is not None:
-            return s, pos_info, None
-
-    return servers[0], None, None
+    pos_info = await get_player_pos(server.server_name, player_name)
+    return server, pos_info, None
 
 
 def format_point_list(points: List[MCQQWaypoint]) -> str:
