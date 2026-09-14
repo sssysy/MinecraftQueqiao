@@ -4,7 +4,7 @@ from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
 from ..mcqq_database import MCQQBind
-from ..utils.helpers.server_select import resolve_servers
+from ..utils.helpers.server_resolve import resolve_servers
 
 sv_mcqq_bind = SV("鹊桥群服相关指令")
 

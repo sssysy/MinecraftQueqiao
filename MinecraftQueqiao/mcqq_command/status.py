@@ -5,8 +5,8 @@ from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
-from ..mcqq_database import MCQQBind, MCQQServer
-from ..utils.helpers.server_select import resolve_servers
+from ..mcqq_database import MCQQServer
+from ..utils.helpers.server_resolve import get_group_target_servers, resolve_servers
 from ..utils.helpers.server_status import (
     get_address_status_text,
     get_server_status_text,
@@ -20,13 +20,10 @@ sv_mcqq_status = SV("鹊桥服务器状态指令")
     ("服务器", "服务器状态"),
     block=True,
     to_ai="""查询当前 Minecraft 服务器的运行状态。
-当用户询问服务器是否在线、服务器挂了吗、当前在线人数、在线玩家列表/有谁在玩、服务器地址/IP/端口、游戏版本或延迟时调用。
+当用户询问服务器是否在线、服务器挂了吗、当前在线人数、在线玩家列表、服务器地址或延迟时调用。
 
 Args:
-    text: 可选。指定要查询的服务器名称或 IP 地址。
-          - 留空/空字符串：默认查询当前群绑定的所有 MC 服务器状态。
-          - 指定服务器名：例如 "生存服"、"香草纪元"。
-          - 指定 IP/域名：例如 "play.example.com" 或 "127.0.0.1:25565"。
+    text: 可选。指定服务器名称或 IP；留空则查询当前群绑定的所有服务器。
 """,
 )
 async def status_command(bot: Bot, ev: Event) -> None:
@@ -42,7 +39,6 @@ async def status_command(bot: Bot, ev: Event) -> None:
                 res = await get_address_status_text(text)
                 await bot.send(res)
                 return
-
             if err:
                 await bot.send(err)
                 return
@@ -50,19 +46,9 @@ async def status_command(bot: Bot, ev: Event) -> None:
     if servers is not None:
         targets = servers
     elif ev.user_type == "group" and ev.group_id:
-        binds = await MCQQBind.get_by_group_id(ev.group_id)
-        if not binds:
-            await bot.send(
-                "当前群未绑定任何服务器，请手动输入服务器 IP 查询"
-            )
-            return
-        targets = []
-        for bind in binds:
-            server = await MCQQServer.get_by_name(bind.server_name)
-            if server:
-                targets.append(server)
+        targets = await get_group_target_servers(ev.group_id, None)
         if not targets:
-            await bot.send("未找到当前群绑定的有效服务器")
+            await bot.send("当前群未绑定任何服务器，请手动输入服务器 IP 查询")
             return
     else:
         targets = await MCQQServer.get_all_enabled()
@@ -70,12 +56,15 @@ async def status_command(bot: Bot, ev: Event) -> None:
             await bot.send("当前未配置任何启用的 MC 服务器")
             return
 
-    # 并发查询所有目标服务器状态
     tasks = [get_server_status_text(server) for server in targets]
-    results = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    await bot.send("\n\n".join(results))
+    lines: List[str] = []
+    for server, result in zip(targets, results):
+        if isinstance(result, Exception):
+            name = server.display_name or server.server_name
+            lines.append(f"{name}\n状态：查询失败 ({result})")
+        else:
+            lines.append(result)
 
-
-
-
+    await bot.send("\n\n".join(lines))

@@ -1,8 +1,6 @@
-import hashlib
-import uuid as uuid_lib
 from io import BytesIO
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 import httpx
 from PIL import Image, ImageDraw, ImageFont
@@ -43,57 +41,12 @@ HTTP_HEADERS = {
 HTTP_TIMEOUT = 8.0
 
 
-def offline_uuid(player_name: str) -> str:
-    """按 OfflinePlayer:<name> 的 MD5 生成 Java 离线 UUID。"""
-    data = f"OfflinePlayer:{player_name}".encode("utf-8")
-    md5 = bytearray(hashlib.md5(data).digest())
-    md5[6] = (md5[6] & 0x0F) | 0x30
-    md5[8] = (md5[8] & 0x3F) | 0x80
-    return str(uuid_lib.UUID(bytes=bytes(md5)))
-
-
-def format_uuid(raw: str) -> str:
-    """将 32 位无横线 UUID 格式化为带横线形式。"""
-    raw = raw.replace("-", "").strip()
-    if len(raw) != 32:
-        return raw
-    return f"{raw[0:8]}-{raw[8:12]}-{raw[12:16]}-{raw[16:20]}-{raw[20:32]}"
-
-
-def mask_uuid(uuid_str: str) -> str:
-    """隐藏 UUID 中间部分，仅保留前两位与后两位。"""
-    if len(uuid_str) <= 4:
-        return uuid_str
-    return uuid_str[:2] + "*" * (len(uuid_str) - 4) + uuid_str[-2:]
-
-
-async def get_player_uuid(player_name: str) -> str:
-    """优先 Mojang API，失败时回退离线 UUID。"""
-    try:
-        async with httpx.AsyncClient(
-            timeout=HTTP_TIMEOUT, headers=HTTP_HEADERS, follow_redirects=True
-        ) as client:
-            resp = await client.get(
-                f"https://api.mojang.com/users/profiles/minecraft/{player_name}"
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                uid = str(data.get("id", "")).strip()
-                if uid:
-                    return format_uuid(uid)
-    except Exception as e:
-        logger.debug(f"[MCQueQiao] Mojang UUID 查询失败({player_name}): {e}")
-    return offline_uuid(player_name)
-
-
 def get_default_avatar() -> Optional[Image.Image]:
-    """获取本地默认头像。"""
     if not DEFAULT_AVATAR_PATH.exists():
         logger.warning(f"[MCQueQiao] 默认头像文件不存在: {DEFAULT_AVATAR_PATH}")
         return None
     try:
         img = Image.open(DEFAULT_AVATAR_PATH).convert("RGBA")
-        logger.info(f"[MCQueQiao] 已加载本地默认头像: {DEFAULT_AVATAR_PATH}")
         return img.resize((AVATAR_SIZE, AVATAR_SIZE), Image.NEAREST)
     except Exception as e:
         logger.error(f"[MCQueQiao] 默认头像加载异常: {e}")
@@ -101,35 +54,24 @@ def get_default_avatar() -> Optional[Image.Image]:
 
 
 async def get_player_avatar(player_name: str) -> Optional[Image.Image]:
-    """从 mc-heads.net 获取玩家头像，失败时使用本地默认头像。"""
     url = f"https://mc-heads.net/avatar/{player_name}/{AVATAR_SIZE}"
-    logger.info(f"[MCQueQiao] 开始获取玩家头像: {player_name} -> {url}")
     try:
         async with httpx.AsyncClient(
             timeout=HTTP_TIMEOUT, headers=HTTP_HEADERS, follow_redirects=True
         ) as client:
             resp = await client.get(url)
-            logger.debug(
-                f"[MCQueQiao] 玩家头像接口响应({player_name}): HTTP {resp.status_code}, "
-                f"content-type={resp.headers.get('content-type')}, len={len(resp.content)}"
-            )
             if resp.status_code == 200 and resp.content:
                 img = Image.open(BytesIO(resp.content)).convert("RGBA")
-                logger.info(
-                    f"[MCQueQiao] 玩家头像下载成功: {player_name} (模式: {img.mode}, 大小: {len(resp.content)} 字节)"
-                )
                 return img.resize((AVATAR_SIZE, AVATAR_SIZE), Image.NEAREST)
-            else:
-                logger.warning(
-                    f"[MCQueQiao] 玩家头像下载失败({player_name}): HTTP {resp.status_code}, "
-                    f"响应内容: {resp.text[:200]}"
-                )
+            logger.debug(
+                f"[MCQueQiao] 玩家头像下载失败({player_name}): HTTP {resp.status_code}"
+            )
     except httpx.TimeoutException:
-        logger.warning(f"[MCQueQiao] 玩家头像下载超时({player_name}): 超过 {HTTP_TIMEOUT} 秒")
+        logger.debug(f"[MCQueQiao] 玩家头像下载超时({player_name})")
     except Exception as e:
-        logger.warning(f"[MCQueQiao] 玩家头像下载异常({player_name}): {type(e).__name__}: {e}")
-
-    logger.info(f"[MCQueQiao] 玩家头像获取未成功，回退至本地默认头像({player_name})")
+        logger.debug(
+            f"[MCQueQiao] 玩家头像下载异常({player_name}): {type(e).__name__}: {e}"
+        )
     return get_default_avatar()
 
 
@@ -201,16 +143,8 @@ def _draw_placeholder(draw: ImageDraw.ImageDraw) -> None:
 async def draw_bind_card(
     player_name: str,
     user_name: str,
-    hide_uuid: bool = False,
-) -> Tuple[bytes, str]:
-    """绘制绑定信息告示牌卡片。
-
-    Returns:
-        (jpg_bytes, display_uuid) — jpg 图片字节与展示用的 UUID 字符串
-    """
-    player_uuid = offline_uuid(player_name)
-    display_uuid = mask_uuid(player_uuid) if hide_uuid else player_uuid
-
+) -> bytes:
+    """绘制绑定信息告示牌卡片，返回 jpg 字节。"""
     bg = Image.open(BG_PATH).convert("RGB")
     canvas = bg.resize((CANVAS_W, CANVAS_H), Image.NEAREST)
 
@@ -257,4 +191,4 @@ async def draw_bind_card(
 
     buf = BytesIO()
     canvas.save(buf, format="JPEG", quality=95, subsampling=0)
-    return buf.getvalue(), display_uuid
+    return buf.getvalue()

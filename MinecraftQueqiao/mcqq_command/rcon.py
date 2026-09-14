@@ -6,11 +6,15 @@ from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
 from ..mcqq_config import mcqq_config
-from ..mcqq_core import send_rcon_command
-from ..mcqq_database import MCQQBind, MCQQServer, MCQQRconWhitelist
+from ..mcqq_core.api import send_rcon_command
+from ..mcqq_database import MCQQServer, MCQQRconWhitelist
 from ..utils.helpers.admin import is_admin, parse_rcon_admin_args
-from ..utils.helpers.prefix_match import is_command_blacklisted
-from ..utils.helpers.server_select import get_group_target_servers, resolve_servers
+from ..utils.helpers.prefix_rules import is_command_blacklisted
+from ..utils.helpers.server_resolve import (
+    get_group_target_servers,
+    parse_optional_servers,
+    resolve_servers,
+)
 from ..utils.helpers.user_name import resolve_user_name
 
 sv_mcqq_rcon_admin = SV("鹊桥 RCON 管理员管理", pm=3, priority=4)
@@ -28,21 +32,14 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
         await bot.send("用法：mcrcon <指令>")
         return
 
-    # 解析可选服务器选择器
-    servers: Optional[List[MCQQServer]] = None
-    command = text
-    parts = text.split(maxsplit=1)
-    if parts:
-        resolved, _ = await resolve_servers(parts[0])
-        if resolved is not None:
-            servers = resolved
-            command = parts[1].strip() if len(parts) > 1 else ""
-
+    servers, command, err = await parse_optional_servers(text)
+    if err:
+        await bot.send(err)
+        return
     if not command:
         await bot.send("未提供指令\n用法：mcrcon <指令>")
         return
 
-    # 指令黑名单检查
     blacklist = mcqq_config.get_config("command_blacklist").data
     if is_command_blacklisted(command, blacklist):
         await bot.send("黑名单指令！")
@@ -56,10 +53,7 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
     results = []
     for server in targets:
         server_display = server.display_name or server.server_name
-
-        # 权限检查：统一管理员鉴权（群管理员 / RCON 白名单）
-        is_auth = await is_admin(server.server_name, ev=ev)
-        if not is_auth:
+        if not await is_admin(server.server_name, ev=ev):
             results.append(f"您没有在 {server_display} 执行指令的权限")
             continue
 
@@ -76,31 +70,38 @@ async def rcon_command(bot: Bot, ev: Event) -> None:
     await bot.send("\n\n".join(results))
 
 
+async def _resolve_admin_targets(
+    bot: Bot, ev: Event, servers: Optional[List[MCQQServer]]
+) -> Optional[List[MCQQServer]]:
+    if servers is not None:
+        return servers
+    if ev.user_type == "group" and ev.group_id:
+        targets = await get_group_target_servers(ev.group_id, None)
+        if not targets:
+            await bot.send("当前群未绑定任何服务器")
+            return None
+        return targets
+    return None
+
+
 @sv_mcqq_rcon_admin.on_command(("增加rcon管理员", "添加rcon管理员"), block=True)
 async def add_rcon_admin(bot: Bot, ev: Event) -> None:
     servers, user_ids, err = await parse_rcon_admin_args(ev)
     if err:
         await bot.send(err)
         return
-
     if not user_ids:
         await bot.send("未检测到目标用户\n用法：mc增加rcon管理员 <@用户>")
         return
 
-    if servers is not None:
-        targets = servers
-    elif ev.user_type == "group" and ev.group_id:
-        targets = await get_group_target_servers(ev.group_id, None)
-        if not targets:
-            await bot.send("当前群未绑定任何服务器，增加失败")
-            return
-    else:
-        await bot.send("请指定服务器\n例如：mc增加rcon管理员 生存服 12345678")
+    targets = await _resolve_admin_targets(bot, ev, servers)
+    if targets is None:
+        if ev.user_type != "group" and servers is None:
+            await bot.send("请指定服务器\n例如：mc增加rcon管理员 生存服 12345678")
         return
 
     results = []
     for server in targets:
-        server_display = server.display_name or server.server_name
         for uid in user_ids:
             existing = await MCQQRconWhitelist.get_by_server_and_user(
                 server.server_name, uid
@@ -112,7 +113,9 @@ async def add_rcon_admin(bot: Bot, ev: Event) -> None:
                     server_name=server.server_name,
                     user_id=uid,
                 )
-                logger.info(f"[MC·RCON] 已将用户 {uid} 添加至服务器 '{server.server_name}' 的 RCON 白名单")
+                logger.info(
+                    f"[MC·RCON] 已将用户 {uid} 添加至 '{server.server_name}' 白名单"
+                )
                 results.append("用户增加成功")
 
     await bot.send("\n".join(results))
@@ -124,25 +127,18 @@ async def delete_rcon_admin(bot: Bot, ev: Event) -> None:
     if err:
         await bot.send(err)
         return
-
     if not user_ids:
         await bot.send("未检测到目标用户\n用法：mc删除rcon管理员 <@用户>")
         return
 
-    if servers is not None:
-        targets = servers
-    elif ev.user_type == "group" and ev.group_id:
-        targets = await get_group_target_servers(ev.group_id, None)
-        if not targets:
-            await bot.send("当前群未绑定任何服务器，删除失败")
-            return
-    else:
-        await bot.send("请指定服务器\n例如：mc删除rcon管理员 生存服 12345678")
+    targets = await _resolve_admin_targets(bot, ev, servers)
+    if targets is None:
+        if ev.user_type != "group" and servers is None:
+            await bot.send("请指定服务器\n例如：mc删除rcon管理员 生存服 12345678")
         return
 
     results = []
     for server in targets:
-        server_display = server.display_name or server.server_name
         for uid in user_ids:
             existing = await MCQQRconWhitelist.get_by_server_and_user(
                 server.server_name, uid
@@ -154,7 +150,9 @@ async def delete_rcon_admin(bot: Bot, ev: Event) -> None:
                     server_name=server.server_name,
                     user_id=uid,
                 )
-                logger.info(f"[MC·RCON] 已将用户 {uid} 从服务器 '{server.server_name}' 的 RCON 白名单中移除")
+                logger.info(
+                    f"[MC·RCON] 已将用户 {uid} 从 '{server.server_name}' 白名单移除"
+                )
                 results.append("用户删除成功")
 
     await bot.send("\n".join(results))
@@ -194,7 +192,9 @@ async def list_rcon_admin(bot: Bot, ev: Event) -> None:
         admins = await MCQQRconWhitelist.get_by_server_name(server.server_name)
         if admins:
             for a in admins:
-                user_name = await resolve_user_name(bot.bot_id, a.user_id, ev.group_id or "")
+                user_name = await resolve_user_name(
+                    bot.bot_id, a.user_id, ev.group_id or ""
+                )
                 if user_name:
                     block_lines.append(f" - {user_name} ({a.user_id})")
                 else:
@@ -204,4 +204,3 @@ async def list_rcon_admin(bot: Bot, ev: Event) -> None:
         server_blocks.append("\n".join(block_lines))
 
     await bot.send("\n\n".join(server_blocks))
-

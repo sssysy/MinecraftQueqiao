@@ -4,7 +4,7 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 
 from ...mcqq_database import MCQQRconWhitelist, MCQQServer, MCQQUserBind
-from .server_select import resolve_servers
+from .server_resolve import resolve_servers
 from .user_select import extract_all_target_users
 
 

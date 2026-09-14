@@ -1,5 +1,3 @@
-from typing import Optional, Tuple
-
 from gsuid_core.ai_core.trigger_bridge import ai_return
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
@@ -7,7 +5,6 @@ from gsuid_core.models import Event
 from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV
 
-from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQUserBind
 from ..utils.helpers.user_name import resolve_user_name
 from ..utils.helpers.user_select import extract_single_target_user
@@ -155,12 +152,10 @@ async def check_player_bind_command(bot: Bot, ev: Event) -> None:
         f"当前绑定的 Minecraft 角色名为：{existing.player_name}"
     )
 
-    hide_uuid = bool(mcqq_config.get_config("hide_player_uuid").data)
     try:
-        img_bytes, _ = await draw_bind_card(
+        img_bytes = await draw_bind_card(
             player_name=existing.player_name,
             user_name=str(user_name),
-            hide_uuid=hide_uuid,
         )
     except Exception as e:
         logger.warning(f"[MCQueQiao] 绘制绑定卡片失败，回退文本: {e}")

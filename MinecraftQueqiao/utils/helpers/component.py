@@ -1,3 +1,7 @@
+"""文本 / JSON → Minecraft 文本组件；可点击组件工厂。"""
+
+from __future__ import annotations
+
 import json
 from typing import Any, Dict, List, Optional, Union
 
@@ -8,20 +12,6 @@ def parse_text_or_json_component(
     default_prefix: Optional[str] = None,
     bold: bool = False,
 ) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
-    """智能解析普通文本或 Minecraft Raw JSON 文本组件。
-
-    如果 content 是合法的 Minecraft JSON 组件结构（以 { 或 [ 开头的 dict 或 list），
-    则反序列化直接返回；否则包装为标准 Minecraft 文本组件结构。
-
-    Args:
-        content: 用户输入的文本或 JSON 字符串
-        default_color: 普通纯文本时的默认颜色（如 'white', 'aqua', 'yellow', 'gold' 等）
-        default_prefix: 可选的前缀标签（如 '[公告] ', '[定时公告] ' 等）
-        bold: 是否默认加粗
-
-    Returns:
-        dict 或 list[dict]
-    """
     stripped = str(content).strip()
     if stripped.startswith(("{", "[")):
         try:
@@ -31,7 +21,6 @@ def parse_text_or_json_component(
         except Exception:
             pass
 
-    # 普通纯文本处理
     components: List[Dict[str, Any]] = []
     if default_prefix:
         components.append({"text": default_prefix, "color": "gold", "bold": True})
@@ -40,5 +29,42 @@ def parse_text_or_json_component(
     if bold:
         text_comp["bold"] = True
     components.append(text_comp)
-
     return components
+
+
+def clickable_text(
+    text: str,
+    url: str,
+    hover: str,
+    *,
+    color: str = "white",
+) -> Dict[str, Any]:
+    """可点击文本组件。同时写 camelCase 与 snake_case，兼容 MC 1.20.4 与 1.20.5+。"""
+    return {
+        "text": text,
+        "color": color,
+        "underlined": True,
+        "clickEvent": {
+            "action": "open_url",
+            "value": url,
+        },
+        "click_event": {
+            "action": "open_url",
+            "url": url,
+            "value": url,
+        },
+        "hoverEvent": {
+            "action": "show_text",
+            "value": hover,
+            "contents": hover,
+        },
+        "hover_event": {
+            "action": "show_text",
+            "value": hover,
+            "contents": hover,
+        },
+    }
+
+
+def chat_image_code(url: str) -> Dict[str, Any]:
+    return {"text": f"[[CICode,url={url},name=图片]]", "color": "white"}
