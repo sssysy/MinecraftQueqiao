@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 from gsuid_core.ai_core.trigger_bridge import ai_return
 from gsuid_core.bot import Bot
@@ -7,10 +7,10 @@ from gsuid_core.models import Event
 from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV
 
-from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQUserBind
+from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
 from ..utils.helpers.user_name import resolve_user_name
-from ..utils.helpers.user_select import extract_single_target_user
+from ..utils.helpers.user_select import extract_at_user_ids
 from ..utils.render.draw_bind_card import draw_bind_card
 
 sv_mcqq_player_bind = SV("鹊桥玩家绑定", priority=4)
@@ -18,33 +18,54 @@ sv_mcqq_player_bind = SV("鹊桥玩家绑定", priority=4)
 
 @sv_mcqq_player_bind.on_command("绑定", block=True)
 async def bind_player_command(bot: Bot, ev: Event) -> None:
-    """绑定 Minecraft 游戏角色名。
-    用法：
-      mc绑定 <游戏ID>
-      mc绑定 <@用户/QQ号> <游戏ID> (代绑)
-    """
-    target_uid, player_name, is_for_other = extract_single_target_user(
-        ev, default_to_sender=True, allow_bare_target=False
-    )
-    if not target_uid:
-        target_uid = ev.user_id
+    """mc绑定 <游戏ID> 或 mc绑定 <@用户|QQ号> <游戏ID>"""
+    at_users = extract_at_user_ids(ev)
+    tokens = split_cmd_args(ev.text)
+
+    target_uid = ev.user_id
+    is_for_other = False
+
+    if at_users:
+        if len(tokens) != 1:
+            await bot.send(
+                "参数传递错误\n用法：mc绑定 @用户 <游戏名>（空格请用 \\+）"
+            )
+            return
+        target_uid = at_users[0]
+        player_name = decode_arg(tokens[0])
+        is_for_other = True
+    else:
+        if len(tokens) == 1:
+            player_name = decode_arg(tokens[0])
+        elif len(tokens) == 2:
+            raw_target = decode_arg(tokens[0]).lstrip("@")
+            if not raw_target.isdigit():
+                await bot.send(
+                    "参数传递错误\n用法：mc绑定 <游戏名> 或 mc绑定 <QQ号> <游戏名>"
+                )
+                return
+            target_uid = raw_target
+            player_name = decode_arg(tokens[1])
+            is_for_other = True
+        else:
+            await bot.send(
+                "参数传递错误\n用法：mc绑定 <游戏名> 或 mc绑定 <@用户|QQ号> <游戏名>"
+            )
+            return
 
     if is_for_other and ev.user_pm > 3:
         await bot.send("无操作权限！", at=True)
         return
 
-    player_name = player_name.strip()
     if not player_name:
         await bot.send("用法：mc绑定 <游戏名>\n如：mc绑定 Notch")
         return
 
-    # 查重：阻止同一 MC 角色名绑定到多个用户
     bound_user = await MCQQUserBind.get_by_player_name(player_name)
     if bound_user and bound_user.user_id != target_uid:
         await bot.send("该玩家已被绑定！")
         return
 
-    # 查询现有绑定
     existing = await MCQQUserBind.get_by_user_id(target_uid)
     if existing:
         await MCQQUserBind.update_data_by_data(
@@ -54,9 +75,7 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
                 "bot_id": ev.bot_id,
             },
         )
-        logger.info(
-            f"[MC·游戏绑定] 绑定更新：{target_uid} <-> {player_name}"
-        )
+        logger.info(f"[MC·游戏绑定] 绑定更新：{target_uid} <-> {player_name}")
         if is_for_other:
             await bot.send(f"更新绑定成功：{target_uid} <-> {player_name}")
         else:
@@ -67,27 +86,37 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
             player_name=player_name,
             bot_id=ev.bot_id,
         )
-        logger.info(
-            f"[MC·游戏绑定] 角色绑定：{target_uid} <-> {player_name}"
-        )
+        logger.info(f"[MC·游戏绑定] 角色绑定：{target_uid} <-> {player_name}")
         if is_for_other:
             await bot.send(f"绑定成功：{target_uid} <-> {player_name}")
         else:
             await bot.send("绑定成功！")
 
 
+def _resolve_optional_target(ev: Event) -> tuple[str, bool, Optional[str]]:
+    """返回 (target_uid, is_for_other, err)。"""
+    at_users = extract_at_user_ids(ev)
+    tokens = split_cmd_args(ev.text)
+    if at_users:
+        if len(tokens) > 0:
+            return ev.user_id, False, "参数传递错误\n用法：mc解绑 [@用户]"
+        return at_users[0], True, None
+    if len(tokens) == 0:
+        return ev.user_id, False, None
+    if len(tokens) == 1:
+        raw = decode_arg(tokens[0]).lstrip("@")
+        if raw.isdigit():
+            return raw, True, None
+        return ev.user_id, False, "参数传递错误\n用法：mc解绑 [@用户|QQ号]"
+    return ev.user_id, False, "参数传递错误\n用法：mc解绑 [@用户|QQ号]"
+
+
 @sv_mcqq_player_bind.on_command(("解绑", "解除绑定"), block=True)
 async def unbind_player_command(bot: Bot, ev: Event) -> None:
-    """解除 Minecraft 游戏角色名绑定。
-    用法：
-      mc解绑
-      mc解绑 <@用户/QQ号> (管理员代解绑)
-    """
-    target_uid, _, is_for_other = extract_single_target_user(
-        ev, default_to_sender=True, allow_bare_target=True
-    )
-    if not target_uid:
-        target_uid = ev.user_id
+    target_uid, is_for_other, err = _resolve_optional_target(ev)
+    if err:
+        await bot.send(err)
+        return
 
     if is_for_other and ev.user_pm > 3:
         await bot.send("无操作权限！", at=True)
@@ -123,16 +152,29 @@ Args:
 """,
 )
 async def check_player_bind_command(bot: Bot, ev: Event) -> None:
-    """查询绑定信息。
-    用法：
-      mc我的绑定
-      mc查看绑定 [@用户/QQ号]
-    """
-    target_uid, _, is_for_other = extract_single_target_user(
-        ev, default_to_sender=True, allow_bare_target=True
-    )
-    if not target_uid:
+    """mc查看绑定 / mc查看绑定 [@用户|QQ号]"""
+    at_users = extract_at_user_ids(ev)
+    tokens = split_cmd_args(ev.text)
+
+    if at_users:
+        if tokens:
+            await bot.send("参数传递错误\n用法：mc查看绑定 [@用户]")
+            return
+        target_uid = at_users[0]
+        is_for_other = True
+    elif len(tokens) == 0:
         target_uid = ev.user_id
+        is_for_other = False
+    elif len(tokens) == 1:
+        raw = decode_arg(tokens[0]).lstrip("@")
+        if not raw.isdigit():
+            await bot.send("参数传递错误\n用法：mc查看绑定 [@用户|QQ号]")
+            return
+        target_uid = raw
+        is_for_other = True
+    else:
+        await bot.send("参数传递错误\n用法：mc查看绑定 [@用户|QQ号]")
+        return
 
     existing = await MCQQUserBind.get_by_user_id(target_uid)
     if not existing:
@@ -155,12 +197,10 @@ async def check_player_bind_command(bot: Bot, ev: Event) -> None:
         f"当前绑定的 Minecraft 角色名为：{existing.player_name}"
     )
 
-    hide_uuid = bool(mcqq_config.get_config("hide_player_uuid").data)
     try:
-        img_bytes, _ = await draw_bind_card(
+        img_bytes = await draw_bind_card(
             player_name=existing.player_name,
             user_name=str(user_name),
-            hide_uuid=hide_uuid,
         )
     except Exception as e:
         logger.warning(f"[MCQueQiao] 绘制绑定卡片失败，回退文本: {e}")

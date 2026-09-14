@@ -3,7 +3,7 @@ from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
 from ..mcqq_database import MCQQServer
-from ..mcqq_ws import ws_manager
+from ..mcqq_core.ws import ws_manager
 
 sv_mcqq_ws = SV("鹊桥ws连接状态指令", pm=3)
 

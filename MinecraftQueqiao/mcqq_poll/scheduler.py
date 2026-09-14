@@ -9,9 +9,9 @@ from apscheduler.triggers.date import DateTrigger
 from gsuid_core.aps import scheduler
 from gsuid_core.logger import logger
 
-from ..mcqq_core import send_broadcast
+from ..mcqq_core.api import send_broadcast
+from ..mcqq_core.ws import ws_manager
 from ..mcqq_database import MCQQPoll, MCQQServer
-from ..mcqq_ws import ws_manager
 from ..utils.helpers.component import parse_text_or_json_component
 
 TZ_SHANGHAI = ZoneInfo("Asia/Shanghai")

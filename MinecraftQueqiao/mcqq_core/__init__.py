@@ -1,148 +1,33 @@
-from typing import Any, List, Optional, Tuple, Union
+"""与鹊桥交互的协议层：API、WS、事件、转发。"""
 
-from gsuid_core.logger import logger
-from gsuid_core.server import on_core_start
+from .api import (
+    init_mcqq_connections,
+    send_action_bar,
+    send_broadcast,
+    send_private_msg,
+    send_rcon_command,
+    send_title,
+)
+from .events import (
+    format_event_message,
+    handle_ws_message,
+    register_ingame_handler,
+    try_ingame_command,
+    ws_event_handler,
+)
+from .ws import ws_manager
 
-from ..mcqq_config import mcqq_config
-from ..mcqq_main import ws_event_handler
-from ..mcqq_ws import ws_manager
-from ..utils.helpers.component import parse_text_or_json_component
-from ..utils.helpers.prefix_match import is_command_blacklisted
-
-
-async def handle_ws_message(server_name: str, raw_message: str) -> None:
-    """处理从鹊桥 WebSocket 接收到的消息"""
-    await ws_event_handler(server_name, raw_message)
-
-
-@on_core_start
-async def init_mcqq_connections() -> None:
-    """初始化鹊桥 WebSocket 事件分发器"""
-    ws_manager.set_message_handler(handle_ws_message)
-    logger.info(
-        "[MC·Websocket] 鹊桥反向 WebSocket 服务端已就绪 "
-        "(端点: /minecraft/ws/{server_name})"
-    )
-
-
-async def send_broadcast(
-    server_name: str,
-    text: Union[str, List[dict], dict],
-    echo: str = "",
-) -> bool:
-    """向指定服务器发送聊天栏广播消息 (broadcast API)"""
-    if isinstance(text, str):
-        components = parse_text_or_json_component(text, default_color="white")
-    elif isinstance(text, dict):
-        components = [text]
-    else:
-        components = text
-
-    message = {
-        "api": "broadcast",
-        "data": {"message": components},
-        "echo": echo,
-    }
-    return await ws_manager.send_json(server_name, message)
-
-
-async def send_title(
-    server_name: str,
-    title: Union[str, dict, list],
-    subtitle: Optional[Union[str, dict, list]] = None,
-    fade_in: int = 20,
-    stay: int = 70,
-    fade_out: int = 20,
-    echo: str = "",
-) -> bool:
-    """向指定服务器发送屏幕大标题消息 (send_title API)"""
-    if isinstance(title, str):
-        title_obj = parse_text_or_json_component(
-            title, default_color="yellow", bold=True
-        )
-    elif isinstance(title, (dict, list)):
-        title_obj = title
-    else:
-        title_obj = {"text": str(title), "color": "yellow", "bold": True}
-
-    data: dict[str, Any] = {
-        "title": title_obj,
-        "fade_in": fade_in,
-        "stay": stay,
-        "fade_out": fade_out,
-    }
-    if subtitle is not None:
-        if isinstance(subtitle, str):
-            subtitle_obj = parse_text_or_json_component(
-                subtitle, default_color="white"
-            )
-        elif isinstance(subtitle, (dict, list)):
-            subtitle_obj = subtitle
-        else:
-            subtitle_obj = {"text": str(subtitle), "color": "white"}
-        data["subtitle"] = subtitle_obj
-
-    message = {
-        "api": "send_title",
-        "data": data,
-        "echo": echo,
-    }
-    return await ws_manager.send_json(server_name, message)
-
-
-async def send_action_bar(
-    server_name: str,
-    message: Union[str, List[dict], dict],
-    echo: str = "",
-) -> bool:
-    """向指定服务器发送动作栏消息 (send_actionbar API)"""
-    if isinstance(message, str):
-        components = parse_text_or_json_component(
-            message, default_color="aqua"
-        )
-    elif isinstance(message, dict):
-        components = [message]
-    elif isinstance(message, list):
-        components = message
-    else:
-        components = [{"text": str(message), "color": "aqua"}]
-
-    msg_payload = {
-        "api": "send_actionbar",
-        "data": {"message": components},
-        "echo": echo,
-    }
-    return await ws_manager.send_json(server_name, msg_payload)
-
-
-async def send_rcon_command(
-    server_name: str,
-    command: str,
-    timeout: Optional[float] = None,
-) -> Tuple[bool, Any]:
-    """通过 WebSocket 异步发送 RCON 命令并等待执行结果 (send_rcon_command API)
-
-    Returns:
-        (success: bool, result_text_or_error: str)
-    """
-    blacklist = mcqq_config.get_config("command_blacklist").data
-    if is_command_blacklisted(command, blacklist):
-        logger.warning(
-            f"[MC·RCON] [{server_name}] 指令 '{command}' 命中黑名单，跳过传递"
-        )
-        return False, "黑名单指令！"
-
-    if timeout is None:
-        try:
-            timeout = float(mcqq_config.get_config("rcon_timeout").data)
-        except Exception:
-            timeout = 8.0
-
-    return await ws_manager.request(
-        server_name=server_name,
-        api="send_rcon_command",
-        data={"command": command},
-        timeout=timeout,
-    )
-
-
+__all__ = [
+    "init_mcqq_connections",
+    "send_action_bar",
+    "send_broadcast",
+    "send_private_msg",
+    "send_rcon_command",
+    "send_title",
+    "ws_manager",
+    "ws_event_handler",
+    "handle_ws_message",
+    "register_ingame_handler",
+    "try_ingame_command",
+    "format_event_message",
+]

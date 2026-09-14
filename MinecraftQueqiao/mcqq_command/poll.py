@@ -19,24 +19,17 @@ async def refresh_poll_command(bot: Bot, ev: Event) -> None:
         return
 
     failed_items = [item for item in details if item.get("status") != "registered"]
-    if not failed_items:
-        lines = [
-            "定时公告刷新",
-            f" - 启用任务：{total_enabled} 个",
-            f"注册成功：{registered_count} 个",
-        ]
-    else:
-        failed_count = len(failed_items)
-        lines = [
-            "定时公告刷新",
-            f" - 启用任务：{total_enabled} 个",
-            f" - 注册成功：{registered_count} 个",
-            f"注册失败：{failed_count} 个",
-            " - 失败列表：",
-        ]
+    lines = [
+        "定时公告刷新",
+        f" - 启用任务：{total_enabled} 个",
+        f" - 注册成功：{registered_count} 个",
+    ]
+    if failed_items:
+        lines.append(f" - 注册失败：{len(failed_items)} 个")
+        lines.append(" - 失败列表：")
         for idx, item in enumerate(failed_items, 1):
             reason = item.get("desc", "未知原因")
-            lines.append(f"  - {idx} | {reason}")
+            lines.append(f"   - {idx} | {reason}")
 
     await bot.send("\n".join(lines))
 

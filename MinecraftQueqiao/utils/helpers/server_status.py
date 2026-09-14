@@ -7,7 +7,7 @@ from gsuid_core.logger import logger
 
 from ...mcqq_config import mcqq_config
 from ...mcqq_database import MCQQServer
-from .prefix_match import is_fake_player
+from .prefix_rules import is_fake_player
 from ..utils.format_code import strip_minecraft_formatting_codes
 
 try:

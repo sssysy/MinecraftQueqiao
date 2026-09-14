@@ -19,6 +19,7 @@ exec_list.extend(
         "ALTER TABLE MCQQServer ADD COLUMN chatimage_enabled INTEGER DEFAULT 0",
         "ALTER TABLE MCQQServer ADD COLUMN display_name TEXT DEFAULT ''",
         "ALTER TABLE MCQQServer ADD COLUMN server_address TEXT DEFAULT ''",
+        "ALTER TABLE MCQQBind ADD COLUMN is_main INTEGER DEFAULT 0",
     ]
 )
 
@@ -113,6 +114,7 @@ class MCQQBind(BaseIDModel, table=True):
     user_type: str = Field(default="group", title="发送类型")
     msg_id: str = Field(default="", title="消息ID")
     user_id: str = Field(default="", title="操作人")
+    is_main: bool = Field(default=False, title="主服务器")
 
     @classmethod
     @with_session
@@ -152,6 +154,39 @@ class MCQQBind(BaseIDModel, table=True):
             )
         )
         return result.scalar_one_or_none()
+
+    @classmethod
+    @with_session
+    async def get_mains_by_group(
+        cls: Type[T_MCQQBind], session: AsyncSession, group_id: str
+    ) -> List["MCQQBind"]:
+        """获取该群所有标记为主服务器的绑定"""
+        result = await session.execute(
+            select(cls).where(
+                cls.group_id == group_id,  # type: ignore
+                cls.is_main == True,  # type: ignore
+            )
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    @with_session
+    async def set_main_for_group(
+        cls: Type[T_MCQQBind],
+        session: AsyncSession,
+        group_id: str,
+        server_name: str,
+    ) -> bool:
+        """将指定服务器设为该群主服务器，并清除该群其他绑定的主服标记。"""
+        result = await session.execute(
+            select(cls).where(cls.group_id == group_id)  # type: ignore
+        )
+        rows = list(result.scalars().all())
+        if not any(b.server_name == server_name for b in rows):
+            return False
+        for bind in rows:
+            bind.is_main = bind.server_name == server_name
+        return True
 
 
 class MCQQRconWhitelist(BaseIDModel, table=True):

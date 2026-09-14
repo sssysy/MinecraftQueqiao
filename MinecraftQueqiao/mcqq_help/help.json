@@ -176,6 +176,14 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
+      },
+      {
+        "name": "玩家传送",
+        "desc": "传送到玩家位置",
+        "eg": "tpa Notch",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
       }
     ]
   },

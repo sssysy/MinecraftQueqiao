@@ -72,13 +72,23 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
     ),
     "tp_enabled": GsBoolConfig(
         "是否开启传送指令",
-        "是否启用传送点及传送相关指令",
+        "是否启用传送点、TPA 及传送相关指令",
         True,
     ),
-    "hide_player_uuid": GsBoolConfig(
-        "隐藏玩家UUID",
-        "开启后，查看绑定卡片中的 UUID 仅显示前两位与后两位，其余以 * 号代替",
-        False,
+    "tpa_timeout": GsIntConfig(
+        "TPA 申请超时时间(秒)",
+        "游戏内 mctpa 传送申请的有效期，超时后同意/拒绝无效",
+        60,
+    ),
+    "ingame_prefix": GsStrConfig(
+        "游戏内指令前缀",
+        "游戏内触发传送等指令的前缀，与群聊 mc 前缀相互独立",
+        "mc",
+    ),
+    "trusted_ips": GsListStrConfig(
+        "受信任IP地址",
+        "当access_token为空时校验",
+        ["127.0.0.1"],
     ),
 }
 

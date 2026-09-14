@@ -1,3 +1,7 @@
+"""鹊桥 WebSocket 连接与 API 发送（协议层，不依赖 command/waypoint）。"""
+
+from __future__ import annotations
+
 import asyncio
 import json
 import uuid
@@ -9,48 +13,29 @@ from starlette.websockets import WebSocketState
 from gsuid_core.app_life import app
 from gsuid_core.logger import logger
 
+from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQServer
 
 
 class WSManager:
-    """管理反向 WebSocket 连接与请求响应通信"""
-
-    _instance: Optional["WSManager"] = None
-
-    def __new__(cls) -> "WSManager":
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
     def __init__(self) -> None:
-        if not hasattr(self, "_initialized"):
-            # server_name -> WebSocket
-            self.active_connections: Dict[str, WebSocket] = {}
-            # echo -> (server_name, Future[dict])
-            self._pending_requests: Dict[str, Tuple[str, asyncio.Future[dict]]] = {}
-            # 外部事件处理器回调 (server_name, raw_message) -> None
-            self.message_handler: Optional[
-                Callable[[str, str], Awaitable[None]]
-            ] = None
-            self._send_locks: Dict[str, asyncio.Lock] = {}
-            self._initialized: bool = True
+        self.active_connections: Dict[str, WebSocket] = {}
+        self._pending_requests: Dict[str, Tuple[str, asyncio.Future[dict]]] = {}
+        self.message_handler: Optional[
+            Callable[[str, str], Awaitable[None]]
+        ] = None
+        self._send_locks: Dict[str, asyncio.Lock] = {}
 
     def set_message_handler(
         self, handler: Callable[[str, str], Awaitable[None]]
     ) -> None:
-        """设置接收消息时的外部处理回调"""
         self.message_handler = handler
 
     def is_connected(self, server_name: str) -> bool:
-        """判断指定服务器是否已建立反向 WS 连接"""
         ws = self.active_connections.get(server_name)
-        return (
-            ws is not None
-            and ws.application_state == WebSocketState.CONNECTED
-        )
+        return ws is not None and ws.application_state == WebSocketState.CONNECTED
 
     def get_connected_servers(self) -> List[str]:
-        """获取所有已连接的服务器名称列表"""
         return [
             name
             for name, ws in self.active_connections.items()
@@ -65,7 +50,6 @@ class WSManager:
     def _cancel_pending_requests(
         self, server_name: str, reason: str = "服务器连接已断开"
     ) -> None:
-        """取消指定服务器所有等待中的请求，唤醒对应 Future 并抛出 ConnectionError"""
         to_cancel = [
             (echo, future)
             for echo, (sname, future) in self._pending_requests.items()
@@ -83,7 +67,6 @@ class WSManager:
     async def register_connection(
         self, server_name: str, websocket: WebSocket
     ) -> None:
-        """注册新的 WebSocket 连接，断开旧有连接"""
         old_ws = self.active_connections.get(server_name)
         if old_ws is not None and old_ws is not websocket:
             try:
@@ -92,14 +75,11 @@ class WSManager:
                 pass
             self._cancel_pending_requests(server_name, "连接已被新连接替换")
         self.active_connections[server_name] = websocket
-        logger.info(
-            f"[MC·Websocket] [{server_name}] ws建立连接 "
-        )
+        logger.info(f"[MC·Websocket] [{server_name}] ws建立连接")
 
     async def remove_connection(
         self, server_name: str, websocket: Optional[WebSocket] = None
     ) -> None:
-        """移除 WebSocket 连接并取消相关等待中的请求"""
         current_ws = self.active_connections.get(server_name)
         if websocket is None or current_ws is websocket:
             self.active_connections.pop(server_name, None)
@@ -107,7 +87,6 @@ class WSManager:
             logger.info(f"[MC·Websocket] [{server_name}] ws断开连接")
 
     async def send_json(self, server_name: str, message: dict) -> bool:
-        """向指定服务器发送 JSON 消息包"""
         ws = self.active_connections.get(server_name)
         if not ws or ws.application_state != WebSocketState.CONNECTED:
             logger.warning(
@@ -125,9 +104,7 @@ class WSManager:
             )
             return True
         except Exception as e:
-            logger.error(
-                f"[MC·Websocket] [{server_name}] 发送 WS 消息失败: {e}"
-            )
+            logger.error(f"[MC·Websocket] [{server_name}] 发送 WS 消息失败: {e}")
             return False
 
     async def request(
@@ -137,11 +114,6 @@ class WSManager:
         data: Optional[dict] = None,
         timeout: float = 8.0,
     ) -> Tuple[bool, Any]:
-        """向指定服务器发送带 echo 的 API 请求，并异步等待响应结果。
-
-        Returns:
-            (success: bool, result_or_error_msg: Any)
-        """
         if not self.is_connected(server_name):
             return False, "服务器未连接"
 
@@ -173,20 +145,15 @@ class WSManager:
             )
             return False, "指令执行超时"
         except ConnectionError as e:
-            logger.warning(
-                f"[MC·Websocket] [{server_name}] API 请求连接中断: {e}"
-            )
+            logger.warning(f"[MC·Websocket] [{server_name}] API 请求连接中断: {e}")
             return False, "服务器连接已断开"
         except Exception as e:
-            logger.error(
-                f"[MC·Websocket] [{server_name}] API 请求异常: {e}"
-            )
+            logger.error(f"[MC·Websocket] [{server_name}] API 请求异常: {e}")
             return False, f"请求异常: {e}"
         finally:
             self._pending_requests.pop(echo, None)
 
     def resolve_response(self, echo: str, response_data: dict) -> bool:
-        """如果收到 API 响应包，根据 echo 唤醒等待中的 Future"""
         item = self._pending_requests.get(echo)
         if item is not None:
             _, future = item
@@ -200,7 +167,6 @@ ws_manager = WSManager()
 
 
 def _get_server_name_from_headers(websocket: WebSocket) -> str:
-    """从 Header 获取 x-self-name"""
     raw_name = (
         websocket.headers.get("x-self-name")
         or websocket.headers.get("X-Self-Name")
@@ -210,8 +176,11 @@ def _get_server_name_from_headers(websocket: WebSocket) -> str:
 
 
 def _get_token_from_request(websocket: WebSocket) -> str:
-    """从 Header (Authorization) 或 Query 参数提取 access_token"""
-    auth = websocket.headers.get("authorization") or websocket.headers.get("Authorization") or ""
+    auth = (
+        websocket.headers.get("authorization")
+        or websocket.headers.get("Authorization")
+        or ""
+    )
     if auth.startswith("Bearer "):
         return auth[7:].strip()
     if auth:
@@ -227,61 +196,54 @@ async def _safe_dispatch_message(
     try:
         await handler(server_name, raw_message)
     except Exception as e:
-        logger.error(
-            f"[MC·Websocket] [{server_name}] 事件处理器异常: {e}"
-        )
+        logger.error(f"[MC·Websocket] [{server_name}] 事件处理器异常: {e}")
 
 
 async def _handle_queqiao_ws_session(
     websocket: WebSocket, server_name_from_path: Optional[str] = None
 ) -> None:
-    """处理单个反向 WebSocket 连接生命周期"""
-    # 优先使用 URL 路径中的 server_name，其次从 Header 提取
     server_name = server_name_from_path or _get_server_name_from_headers(websocket)
 
     if not server_name:
-        logger.warning(
-            "[MC·Websocket] ws连接拒绝：未指定ServerName"
-        )
+        logger.warning("[MC·Websocket] ws连接拒绝：未指定ServerName")
         await websocket.close(code=1008, reason="Missing server_name")
         return
 
-    # 防回环校验
     origin = websocket.headers.get("x-client-origin") or ""
     if origin.lower() == "gsuid_core":
-        logger.warning(
-            "[MC·Websocket] 拒绝连接：gsuid_core"
-        )
+        logger.warning("[MC·Websocket] 拒绝连接：gsuid_core")
         await websocket.close(code=1008, reason="Origin cannot be gsuid_core")
         return
 
-    # 查询数据库配置
     server = await MCQQServer.get_by_name(server_name)
     if server is None:
         logger.warning(
-            f"[MC·Websocket] ws连接拒绝：位置服务器 {server_name}，请先添加服务器再连接"
+            f"[MC·Websocket] ws连接拒绝：未配置服务器 {server_name}，请先添加服务器再连接"
         )
         await websocket.close(code=1008, reason="Unknown server_name")
         return
 
     if not server.enabled:
-        logger.warning(
-            "[MC·Websocket] ws连接拒绝：服务器被禁用"
-        )
+        logger.warning("[MC·Websocket] ws连接拒绝：服务器被禁用")
         await websocket.close(code=1008, reason="Server is disabled")
         return
 
-    # Token 鉴权
     if server.access_token:
         client_token = _get_token_from_request(websocket)
         if client_token != server.access_token:
-            logger.warning(
-                f"[MC·Websocket] ws连接拒绝：{server_name} 鉴权失败"
-            )
+            logger.warning(f"[MC·Websocket] ws连接拒绝：{server_name} 鉴权失败")
             await websocket.close(code=1008, reason="Invalid access token")
             return
+    else:
+        client_ip = websocket.client.host if websocket.client else ""
+        trusted_ips: List[str] = mcqq_config.get_config("trusted_ips").data
+        if client_ip not in trusted_ips:
+            logger.warning(
+                f"[MC·Websocket] ws连接拒绝：{server_name} 未配置 access_token 且客户端 IP '{client_ip}' 不在受信任列表中"
+            )
+            await websocket.close(code=1008, reason="Untrusted IP address")
+            return
 
-    # 握手成功
     await websocket.accept()
     await ws_manager.register_connection(server_name, websocket)
 
@@ -291,18 +253,15 @@ async def _handle_queqiao_ws_session(
             if not raw_message:
                 continue
 
-            # 优先检查是否为 API Response 包
             try:
                 data = json.loads(raw_message)
                 if isinstance(data, dict):
                     echo = str(data.get("echo", ""))
                     if echo and ws_manager.resolve_response(echo, data):
-                        # 已作为 API 响应消费
                         continue
             except json.JSONDecodeError:
                 pass
 
-            # 分发至事件处理器（使用 create_task 异步派发，避免阻塞 WebSocket 接收循环导致后续请求死锁）
             if ws_manager.message_handler:
                 asyncio.create_task(
                     _safe_dispatch_message(
@@ -318,13 +277,11 @@ async def _handle_queqiao_ws_session(
         await ws_manager.remove_connection(server_name, websocket)
 
 
-# 挂载到 GsCore FastAPI 端点 1：带路径参数（如 ws://IP:PORT/minecraft/ws/Server1）
 @app.websocket("/minecraft/ws/{server_name}")
 async def queqiao_reverse_ws_with_path(websocket: WebSocket, server_name: str):
     await _handle_queqiao_ws_session(websocket, server_name)
 
 
-# 挂载到 GsCore FastAPI 端点 2：固定路径（从 Header 获取 server_name，如 ws://IP:PORT/minecraft/ws）
 @app.websocket("/minecraft/ws")
 async def queqiao_reverse_ws_default(websocket: WebSocket):
     await _handle_queqiao_ws_session(websocket, None)
