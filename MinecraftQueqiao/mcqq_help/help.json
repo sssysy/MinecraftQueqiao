@@ -94,6 +94,22 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
+      },
+      {
+        "name": "切换主服务器",
+        "desc": "设置当前群对应的主服务器",
+        "eg": "切换主服务器 Server",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "刷新定时公告",
+        "desc": "重新加载并注册定时公告任务",
+        "eg": "刷新定时公告",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
       }
     ]
   },
@@ -112,6 +128,22 @@
         "name": "私信",
         "desc": "向指定绑定的玩家或游戏ID发送私聊",
         "eg": "私信 Notch 我先下了",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "头像",
+        "desc": "查询玩家正版头像",
+        "eg": "头像 [Notch|@用户]",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "皮肤",
+        "desc": "查询玩家正版皮肤",
+        "eg": "皮肤 [Notch|@用户]",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
@@ -179,7 +211,7 @@
       },
       {
         "name": "玩家传送",
-        "desc": "传送到玩家位置",
+        "desc": "游戏内发起/接受/拒绝玩家传送请求",
         "eg": "tpa Notch",
         "need_ck": false,
         "need_sk": false,

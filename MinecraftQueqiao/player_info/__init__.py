@@ -1,5 +1,3 @@
-from typing import Optional
-
 from gsuid_core.ai_core.trigger_bridge import ai_return
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
@@ -12,11 +10,19 @@ from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
 from ..utils.helpers.user_name import resolve_user_name
 from ..utils.helpers.user_select import extract_at_user_ids
 from ..utils.render.draw_bind_card import draw_bind_card
+from .service import (
+    fetch_avatar_png,
+    fetch_skin_png,
+    resolve_target_player_name,
+)
 
-sv_mcqq_player_bind = SV("鹊桥玩家绑定", priority=4)
+sv_player_info = SV("玩家相关", priority=4)
+
+AVATAR_USAGE = "用法：mc头像 [正版玩家名|@用户]\n空参则查询自己已绑定的游戏名"
+SKIN_USAGE = "用法：mc皮肤 [正版玩家名|@用户]\n空参则查询自己已绑定的游戏名"
 
 
-@sv_mcqq_player_bind.on_command("绑定", block=True)
+@sv_player_info.on_command("绑定", block=True)
 async def bind_player_command(bot: Bot, ev: Event) -> None:
     """mc绑定 <游戏ID> 或 mc绑定 <@用户|QQ号> <游戏ID>"""
     at_users = extract_at_user_ids(ev)
@@ -93,7 +99,7 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
             await bot.send("绑定成功！")
 
 
-def _resolve_optional_target(ev: Event) -> tuple[str, bool, Optional[str]]:
+def _resolve_optional_target(ev: Event) -> tuple[str, bool, str | None]:
     """返回 (target_uid, is_for_other, err)。"""
     at_users = extract_at_user_ids(ev)
     tokens = split_cmd_args(ev.text)
@@ -111,7 +117,7 @@ def _resolve_optional_target(ev: Event) -> tuple[str, bool, Optional[str]]:
     return ev.user_id, False, "参数传递错误\n用法：mc解绑 [@用户|QQ号]"
 
 
-@sv_mcqq_player_bind.on_command(("解绑", "解除绑定"), block=True)
+@sv_player_info.on_command(("解绑", "解除绑定"), block=True)
 async def unbind_player_command(bot: Bot, ev: Event) -> None:
     target_uid, is_for_other, err = _resolve_optional_target(ev)
     if err:
@@ -141,18 +147,9 @@ async def unbind_player_command(bot: Bot, ev: Event) -> None:
         await bot.send("解绑失败，检查控制台！")
 
 
-@sv_mcqq_player_bind.on_command(
-    ("查看绑定", "查询绑定"),
-    block=True,
-    to_ai="""查询当前用户或指定用户在 Minecraft 服务器中绑定的游戏角色名及绑定信息。
-当用户询问"我绑定了什么游戏ID"、"我绑定的MC名字叫什么"、"查看我的绑定卡片"或查询某人绑定时调用。
-
-Args:
-    text: 可选。要查询的目标用户（QQ号或@提及）。留空或空字符串则默认查询当前发送者自己。
-""",
-)
+@sv_player_info.on_command(("查看绑定", "查询绑定"), block=True)
 async def check_player_bind_command(bot: Bot, ev: Event) -> None:
-    """mc查看绑定 / mc查看绑定 [@用户|QQ号]"""
+    """mc查看绑定 / mc查看绑定 @用户"""
     at_users = extract_at_user_ids(ev)
     tokens = split_cmd_args(ev.text)
 
@@ -165,15 +162,8 @@ async def check_player_bind_command(bot: Bot, ev: Event) -> None:
     elif len(tokens) == 0:
         target_uid = ev.user_id
         is_for_other = False
-    elif len(tokens) == 1:
-        raw = decode_arg(tokens[0]).lstrip("@")
-        if not raw.isdigit():
-            await bot.send("参数传递错误\n用法：mc查看绑定 [@用户|QQ号]")
-            return
-        target_uid = raw
-        is_for_other = True
     else:
-        await bot.send("参数传递错误\n用法：mc查看绑定 [@用户|QQ号]")
+        await bot.send("参数传递错误\n用法：mc查看绑定 [@用户]")
         return
 
     existing = await MCQQUserBind.get_by_user_id(target_uid)
@@ -213,3 +203,33 @@ async def check_player_bind_command(bot: Bot, ev: Event) -> None:
         return
 
     await bot.send(MessageSegment.image(img_bytes))
+
+
+@sv_player_info.on_command("头像", block=True)
+async def player_avatar_command(bot: Bot, ev: Event) -> None:
+    player_name, err = await resolve_target_player_name(ev, cmd_usage=AVATAR_USAGE)
+    if err or not player_name:
+        await bot.send(err or AVATAR_USAGE)
+        return
+
+    png, fetch_err = await fetch_avatar_png(player_name)
+    if fetch_err or png is None:
+        await bot.send(fetch_err or f"获取头像失败：{player_name}")
+        return
+
+    await bot.send(MessageSegment.image(png))
+
+
+@sv_player_info.on_command("皮肤", block=True)
+async def player_skin_command(bot: Bot, ev: Event) -> None:
+    player_name, err = await resolve_target_player_name(ev, cmd_usage=SKIN_USAGE)
+    if err or not player_name:
+        await bot.send(err or SKIN_USAGE)
+        return
+
+    png, fetch_err = await fetch_skin_png(player_name)
+    if fetch_err or png is None:
+        await bot.send(fetch_err or f"获取皮肤失败：{player_name}")
+        return
+
+    await bot.send(MessageSegment.image(png))

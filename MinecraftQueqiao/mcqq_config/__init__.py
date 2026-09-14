@@ -90,6 +90,12 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "当access_token为空时校验",
         ["127.0.0.1"],
     ),
+    "avatar_style": GsListStrConfig(
+        "头像图片风格",
+        "发送的图片风格，多选则从已选中随机抽取",
+        ["正面大脸"],
+        options=["正面大脸"],
+    ),
 }
 
 CONFIG_PATH = get_res_path() / "MinecraftQueqiao" / "config.json"
