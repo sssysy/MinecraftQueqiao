@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
@@ -16,11 +15,15 @@ from ...mcqq_database import (
     MCQQUserBind,
     MCQQWaypoint,
 )
+from ..helpers.player_online import get_player_pos as _get_player_pos
 
-POS_PATTERN = re.compile(
-    r"\[\s*(-?\d+(?:\.\d+)?)[df]?\s*,\s*(-?\d+(?:\.\d+)?)[df]?\s*,\s*(-?\d+(?:\.\d+)?)[df]?\s*\]"
-)
-DIM_PATTERN = re.compile(r'"(minecraft:[^"]+)"|"([^"]+)"')
+__all__ = [
+    "ActiveServer",
+    "tp_enabled",
+    "tellraw",
+    "get_player_pos",
+    "execute_teleport",
+]
 
 
 @dataclass
@@ -48,45 +51,7 @@ async def tellraw(
 async def get_player_pos(
     server_name: str, player_name: str
 ) -> Optional[Tuple[float, float, float, str]]:
-    ok, out = await send_rcon_command(
-        server_name, f"data get entity {player_name} Pos"
-    )
-    if not ok or not out:
-        logger.debug(
-            f"[MC·地标传送] [{server_name}] 获取玩家 {player_name} Pos 失败: {out}"
-        )
-        return None
-
-    out_str = str(out)
-    if "No entity was found" in out_str or "未找到实体" in out_str:
-        return None
-
-    match = POS_PATTERN.search(out_str)
-    if not match:
-        logger.warning(
-            f"[MC·地标传送] [{server_name}] 无法解析玩家 {player_name} 坐标: {out_str}"
-        )
-        return None
-
-    try:
-        x = round(float(match.group(1)), 1)
-        y = round(float(match.group(2)), 1)
-        z = round(float(match.group(3)), 1)
-    except (ValueError, IndexError):
-        return None
-
-    dimension = "minecraft:overworld"
-    ok_dim, out_dim = await send_rcon_command(
-        server_name, f"data get entity {player_name} Dimension"
-    )
-    if ok_dim and out_dim:
-        dim_match = DIM_PATTERN.search(str(out_dim))
-        if dim_match:
-            dimension = (
-                dim_match.group(1) or dim_match.group(2) or "minecraft:overworld"
-            )
-
-    return (x, y, z, dimension)
+    return await _get_player_pos(server_name, player_name)
 
 
 async def execute_teleport(

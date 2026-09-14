@@ -66,5 +66,40 @@ def clickable_text(
     }
 
 
+def clickable_command(
+    text: str,
+    command: str,
+    hover: str,
+    *,
+    color: str = "white",
+) -> Dict[str, Any]:
+    """run_command 可点击文本组件。command 建议带前导 /。"""
+    value = command if command.startswith("/") else f"/{command}"
+    return {
+        "text": text,
+        "color": color,
+        "underlined": True,
+        "clickEvent": {
+            "action": "run_command",
+            "value": value,
+        },
+        "click_event": {
+            "action": "run_command",
+            "command": value,
+            "value": value,
+        },
+        "hoverEvent": {
+            "action": "show_text",
+            "value": hover,
+            "contents": hover,
+        },
+        "hover_event": {
+            "action": "show_text",
+            "value": hover,
+            "contents": hover,
+        },
+    }
+
+
 def chat_image_code(url: str) -> Dict[str, Any]:
     return {"text": f"[[CICode,url={url},name=图片]]", "color": "white"}

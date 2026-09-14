@@ -72,8 +72,13 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
     ),
     "tp_enabled": GsBoolConfig(
         "是否开启传送指令",
-        "是否启用传送点及传送相关指令",
+        "是否启用传送点、TPA 及传送相关指令",
         True,
+    ),
+    "tpa_timeout": GsIntConfig(
+        "TPA 申请超时时间(秒)",
+        "游戏内 mctpa 传送申请的有效期，超时后同意/拒绝无效",
+        60,
     ),
     "ingame_prefix": GsStrConfig(
         "游戏内指令前缀",
