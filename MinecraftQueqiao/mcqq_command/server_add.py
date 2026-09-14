@@ -40,8 +40,8 @@ def _ai_return(text: str) -> None:
         from gsuid_core.ai_core.trigger_bridge import ai_return
 
         ai_return(text)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[MCQueQiao] ai_return 异常: {e}")
 
 
 def _is_ai_bot(bot: Bot) -> bool:

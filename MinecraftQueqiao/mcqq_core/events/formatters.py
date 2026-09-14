@@ -21,10 +21,12 @@ EVENT_LABEL = {
 
 
 def _player_name(data: dict[str, Any]) -> str:
-    player = data.get("player", {})
+    player = data.get("player")
     if isinstance(player, dict):
-        return str(player.get("nickname") or "Unknown")
-    return str(data.get("player_name") or "Unknown")
+        nickname = player.get("nickname")
+        if nickname:
+            return str(nickname)
+    return str(data.get("player_name") or data.get("nickname") or "Unknown")
 
 
 def _display_server(data: dict[str, Any], display_name: Optional[str]) -> str:

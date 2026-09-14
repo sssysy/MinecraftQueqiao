@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
@@ -110,7 +111,10 @@ def build_point_from_tokens(
         if not val_clean:
             return default
         try:
-            return round(float(val_clean), 1)
+            num = float(val_clean)
+            if not math.isfinite(num):
+                raise ValueError
+            return round(num, 1)
         except ValueError:
             raise ValueError(f"坐标 {name} 必须为数字，输入为: '{val_clean}'")
 

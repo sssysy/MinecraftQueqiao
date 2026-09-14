@@ -10,7 +10,6 @@ from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
 from ..mcqq_config import mcqq_config
-from ..mcqq_database import MCQQBind, MCQQServer
 from ..utils.helpers.component import clickable_text, chat_image_code
 from ..utils.helpers.group_name import get_group_name
 from ..utils.helpers.prefix_rules import (
@@ -18,6 +17,7 @@ from ..utils.helpers.prefix_rules import (
     is_blacklisted,
     match_and_trim_prefix,
 )
+from ..utils.helpers.server_resolve import get_group_servers
 from ..utils.helpers.user_name import resolve_user_name
 from .api import send_broadcast
 
@@ -86,9 +86,9 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
                 )
                 return
 
-    binds = await MCQQBind.get_by_group_id(ev.group_id)
-    if not binds:
-        logger.debug(f"[MC·消息转发] 群 {ev.group_id} 未绑定任何MC服务器，跳过转发")
+    servers = await get_group_servers(ev.group_id, only_enabled=True)
+    if not servers:
+        logger.debug(f"[MC·消息转发] 群 {ev.group_id} 未绑定可用MC服务器，跳过转发")
         return
 
     sender_nickname = ev.sender.get("nickname", "") or ev.user_id
@@ -100,9 +100,8 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
             name = await resolve_user_name(ev.bot_id, s["uid"], group_id)
             s["text"] = f"@{name}({s['uid']})" if name else f"(@{s['uid']})"
 
-    for bind in binds:
-        server = await MCQQServer.get_by_name(bind.server_name)
-        chatimage_enabled = bool(server and server.chatimage_enabled)
+    for server in servers:
+        chatimage_enabled = bool(server.chatimage_enabled)
 
         formatted: List[Dict[str, Any]] = []
         if group_name:
@@ -132,8 +131,8 @@ async def qq_to_mc_forward(bot: Bot, ev: Event) -> None:
             else:
                 formatted.append({"text": s["text"], "color": "white"})
 
-        success = await send_broadcast(bind.server_name, formatted)
+        success = await send_broadcast(server.server_name, formatted)
         if success:
-            logger.debug(f"[MC·消息转发] 已转发至 '{bind.server_name}'")
+            logger.debug(f"[MC·消息转发] 已转发至 '{server.server_name}'")
         else:
-            logger.error(f"[MC·消息转发] 转发至 '{bind.server_name}' 失败")
+            logger.error(f"[MC·消息转发] 转发至 '{server.server_name}' 失败")
