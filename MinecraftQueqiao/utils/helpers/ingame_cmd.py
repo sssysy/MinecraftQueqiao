@@ -38,9 +38,12 @@ class IngameCommands:
             return False
 
         prefix = read_ingame_prefix()
-        msg = raw.strip()
+        # 先丢掉首尾空白，再匹配
+        msg = (raw or "").strip()
         if msg.startswith("/"):
             msg = msg[1:].strip()
+        if not msg:
+            return False
 
         # 最长指令名优先，避免 tp 吃掉 tp列表
         for name, fn, need_admin in sorted(
@@ -52,7 +55,8 @@ class IngameCommands:
                 if msg == token:
                     args = ""
                     break
-                if msg.startswith(token + " "):
+                if msg.startswith(token):
+                    # 命令后可直接接参数
                     args = msg[len(token) :].strip()
                     break
             if args is None:
