@@ -13,7 +13,7 @@ from gsuid_core.models import Event
 from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQUserBind
 from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
-from ..utils.helpers.downloader import download_image
+from ..utils.helpers.downloader import download_image, fetch_player_avatar
 from ..utils.helpers.user_select import extract_at_user_ids
 
 AVATAR_SIZE = 256
@@ -72,11 +72,10 @@ async def fetch_avatar_png(player_name: str) -> Tuple[Optional[bytes], Optional[
     """按配置风格拉取头像，固定输出 256x256 PNG。"""
     style = _pick_avatar_style()
     # 当前仅「正面大脸」；预留多风格扩展
-    url = f"https://mc-heads.net/avatar/{player_name}/{AVATAR_SIZE}"
     if style != STYLE_FACE:
         logger.warning(f"[MCQueQiao] 未知头像风格 {style}，回退为 {STYLE_FACE}")
 
-    content = await download_image(url)
+    content = await fetch_player_avatar(player_name)
     if content is None:
         return None, f"获取头像失败：{player_name}\n请确认玩家名是否为正版名，或稍后重试"
 

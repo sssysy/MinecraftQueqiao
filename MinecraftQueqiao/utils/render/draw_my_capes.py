@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Sequence
 from gsuid_core.logger import logger
 
 from .render import fill_template, render_html
-from ..helpers.downloader import download_image
+from ..helpers.downloader import fetch_player_avatar
 
 if TYPE_CHECKING:
     from ...mc_capes.service import CapeItem
@@ -165,9 +165,7 @@ async def draw_my_capes(
 ) -> bytes:
     """渲染「我的披风」图片，返回 PNG 图像字节。"""
     if avatar_bytes is None and player_name:
-        avatar_bytes = await download_image(
-            f"https://mc-heads.net/avatar/{player_name}/256"
-        )
+        avatar_bytes = await fetch_player_avatar(player_name)
 
     if avatar_bytes:
         avatar_uri = _bytes_to_data_uri(avatar_bytes)

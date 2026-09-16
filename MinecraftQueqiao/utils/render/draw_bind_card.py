@@ -5,7 +5,7 @@ from typing import Optional
 from PIL import Image, ImageDraw, ImageFont
 from gsuid_core.logger import logger
 
-from ..helpers.downloader import download_image
+from ..helpers.downloader import fetch_player_avatar
 
 RENDER_DIR = Path(__file__).parent
 FONT_PATH = RENDER_DIR.parent / "fonts" / "mc-unicode-font.otf"
@@ -50,8 +50,7 @@ def get_default_avatar() -> Optional[Image.Image]:
 
 
 async def get_player_avatar(player_name: str) -> Optional[Image.Image]:
-    url = f"https://mc-heads.net/avatar/{player_name}/{AVATAR_SIZE}"
-    content = await download_image(url)
+    content = await fetch_player_avatar(player_name)
     if content is None:
         return get_default_avatar()
     try:

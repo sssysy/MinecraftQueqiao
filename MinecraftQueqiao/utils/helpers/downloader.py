@@ -16,6 +16,9 @@ HTTP_HEADERS = {
 }
 HTTP_TIMEOUT = 10.0
 
+# 头像统一按 256 下载并缓存；展示尺寸由调用方缩放
+PLAYER_AVATAR_CACHE_SIZE = 256
+
 
 def _cache_path(url: str) -> Path:
     digest = hashlib.md5(url.encode("utf-8")).hexdigest()
@@ -70,3 +73,11 @@ async def download_image(url: str) -> Optional[bytes]:
         logger.warning(f"[MCQueQiao] 写入图片缓存失败({cache_file}): {e}")
 
     return content
+
+
+async def fetch_player_avatar(player_name: str) -> Optional[bytes]:
+    """统一玩家头像入口：固定 256 缓存键，失败返回 None。"""
+    if not player_name:
+        return None
+    url = f"https://mc-heads.net/avatar/{player_name}/{PLAYER_AVATAR_CACHE_SIZE}"
+    return await download_image(url)
