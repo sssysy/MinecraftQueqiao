@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
 import httpx
 from gsuid_core.logger import logger
+
+from ..mcqq_config import mcqq_config
+from ..mcqq_database import MCQQUserBind
 
 MS_DEVICE_CODE_URL = (
     "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode"
@@ -394,3 +398,39 @@ async def ensure_mc_token(
         "expires_at": time.time() + profile.expires_in - TOKEN_EXPIRE_BUFFER,
     }
     return profile.mc_access_token, updated, None
+
+
+async def get_user_mc_token(user_id: str) -> Tuple[Optional[str], Optional[str]]:
+    """user_id → 可用 MC access_token；必要时续期并回写绑定表。
+
+    Returns:
+        (mc_access_token, err)
+    """
+    bind = await MCQQUserBind.get_by_user_id(user_id)
+    if not bind or not bind.token:
+        return None, "你尚未登录微软账号，请先发送 mc登录"
+
+    try:
+        payload = json.loads(bind.token)
+    except (TypeError, json.JSONDecodeError):
+        return None, "登录态异常，请重新发送 mc登录"
+
+    client_id = str(mcqq_config.get_config("ms_client_id").data or "").strip()
+    if not client_id:
+        return None, "尚未配置微软应用客户端 ID，请在插件配置中填写 ms_client_id"
+
+    token, updated, err = await ensure_mc_token(client_id, payload)
+    if err or not token:
+        return None, err or "登录已失效，请重新发送 mc登录"
+
+    if updated:
+        try:
+            new_payload = {**payload, **updated}
+            await MCQQUserBind.update_data_by_data(
+                {"user_id": user_id},
+                {"token": json.dumps(new_payload, ensure_ascii=False)},
+            )
+        except Exception as e:
+            logger.warning(f"[MC·微软登录] token 续期回写失败 user={user_id}: {e}")
+
+    return token, None
