@@ -5,10 +5,10 @@ import html as html_lib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Sequence
 
-import httpx
 from gsuid_core.logger import logger
 
 from .render import fill_template, render_html
+from ..helpers.downloader import download_image
 
 if TYPE_CHECKING:
     from ...mc_capes.service import CapeItem
@@ -21,11 +21,6 @@ _DEFAULT_AVATAR_PNG = _TEXTURE2D_DIR / "default_head.png"
 
 _NO_CAPES_B64: str | None = None
 _DEFAULT_AVATAR_B64: str | None = None
-
-HTTP_HEADERS = {
-    "User-Agent": "MCQueQiao/2.0 (draw-my-capes; +https://github.com)",
-}
-HTTP_TIMEOUT = 8.0
 
 
 def _get_no_capes_data_uri() -> str:
@@ -50,22 +45,6 @@ def _get_default_avatar_data_uri() -> str:
         else:
             _DEFAULT_AVATAR_B64 = ""
     return _DEFAULT_AVATAR_B64
-
-
-async def _fetch_avatar_bytes(player_name: str) -> bytes | None:
-    if not player_name:
-        return None
-    url = f"https://mc-heads.net/avatar/{player_name}/256"
-    try:
-        async with httpx.AsyncClient(
-            timeout=HTTP_TIMEOUT, headers=HTTP_HEADERS, follow_redirects=True
-        ) as client:
-            resp = await client.get(url)
-            if resp.status_code == 200 and resp.content:
-                return resp.content
-    except Exception as e:
-        logger.debug(f"[MCQueQiao] 拉取头像异常 {player_name}: {e}")
-    return None
 
 
 def _bytes_to_data_uri(data: bytes, mime_type: str = "image/png") -> str:
@@ -185,8 +164,10 @@ async def draw_my_capes(
     avatar_bytes: bytes | None = None,
 ) -> bytes:
     """渲染「我的披风」图片，返回 PNG 图像字节。"""
-    if avatar_bytes is None:
-        avatar_bytes = await _fetch_avatar_bytes(player_name)
+    if avatar_bytes is None and player_name:
+        avatar_bytes = await download_image(
+            f"https://mc-heads.net/avatar/{player_name}/256"
+        )
 
     if avatar_bytes:
         avatar_uri = _bytes_to_data_uri(avatar_bytes)

@@ -2,9 +2,10 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
-import httpx
 from PIL import Image, ImageDraw, ImageFont
 from gsuid_core.logger import logger
+
+from ..helpers.downloader import download_image
 
 RENDER_DIR = Path(__file__).parent
 FONT_PATH = RENDER_DIR.parent / "fonts" / "mc-unicode-font.otf"
@@ -35,11 +36,6 @@ TITLE_COLOR = (0, 0, 0)
 PLACEHOLDER_BG = (180, 160, 120)
 PLACEHOLDER_BORDER = (100, 80, 50)
 
-HTTP_HEADERS = {
-    "User-Agent": "MCQueQiao/2.0 (bind-card; +https://github.com)",
-}
-HTTP_TIMEOUT = 8.0
-
 
 def get_default_avatar() -> Optional[Image.Image]:
     if not DEFAULT_AVATAR_PATH.exists():
@@ -55,22 +51,15 @@ def get_default_avatar() -> Optional[Image.Image]:
 
 async def get_player_avatar(player_name: str) -> Optional[Image.Image]:
     url = f"https://mc-heads.net/avatar/{player_name}/{AVATAR_SIZE}"
+    content = await download_image(url)
+    if content is None:
+        return get_default_avatar()
     try:
-        async with httpx.AsyncClient(
-            timeout=HTTP_TIMEOUT, headers=HTTP_HEADERS, follow_redirects=True
-        ) as client:
-            resp = await client.get(url)
-            if resp.status_code == 200 and resp.content:
-                img = Image.open(BytesIO(resp.content)).convert("RGBA")
-                return img.resize((AVATAR_SIZE, AVATAR_SIZE), Image.NEAREST)
-            logger.debug(
-                f"[MCQueQiao] 玩家头像下载失败({player_name}): HTTP {resp.status_code}"
-            )
-    except httpx.TimeoutException:
-        logger.debug(f"[MCQueQiao] 玩家头像下载超时({player_name})")
+        img = Image.open(BytesIO(content)).convert("RGBA")
+        return img.resize((AVATAR_SIZE, AVATAR_SIZE), Image.NEAREST)
     except Exception as e:
         logger.debug(
-            f"[MCQueQiao] 玩家头像下载异常({player_name}): {type(e).__name__}: {e}"
+            f"[MCQueQiao] 玩家头像处理异常({player_name}): {type(e).__name__}: {e}"
         )
     return get_default_avatar()
 

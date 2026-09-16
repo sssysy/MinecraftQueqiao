@@ -6,7 +6,6 @@ import random
 from io import BytesIO
 from typing import List, Optional, Tuple
 
-import httpx
 from PIL import Image
 from gsuid_core.logger import logger
 from gsuid_core.models import Event
@@ -14,13 +13,10 @@ from gsuid_core.models import Event
 from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQUserBind
 from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
+from ..utils.helpers.downloader import download_image
 from ..utils.helpers.user_select import extract_at_user_ids
 
 AVATAR_SIZE = 256
-HTTP_HEADERS = {
-    "User-Agent": "MCQueQiao/2.0 (player-info; +https://github.com)",
-}
-HTTP_TIMEOUT = 8.0
 
 # 正面大脸：mc-heads avatar（仅头部正面）
 STYLE_FACE = "正面大脸"
@@ -72,26 +68,6 @@ def _pick_avatar_style() -> str:
     return random.choice(options)
 
 
-async def _download(url: str) -> Optional[bytes]:
-    try:
-        async with httpx.AsyncClient(
-            timeout=HTTP_TIMEOUT,
-            headers=HTTP_HEADERS,
-            follow_redirects=True,
-        ) as client:
-            resp = await client.get(url)
-            if resp.status_code == 200 and resp.content:
-                return resp.content
-            logger.debug(
-                f"[MCQueQiao] 下载失败 {url}: HTTP {resp.status_code}"
-            )
-    except httpx.TimeoutException:
-        logger.debug(f"[MCQueQiao] 下载超时 {url}")
-    except Exception as e:
-        logger.debug(f"[MCQueQiao] 下载异常 {url}: {type(e).__name__}: {e}")
-    return None
-
-
 async def fetch_avatar_png(player_name: str) -> Tuple[Optional[bytes], Optional[str]]:
     """按配置风格拉取头像，固定输出 256x256 PNG。"""
     style = _pick_avatar_style()
@@ -100,7 +76,7 @@ async def fetch_avatar_png(player_name: str) -> Tuple[Optional[bytes], Optional[
     if style != STYLE_FACE:
         logger.warning(f"[MCQueQiao] 未知头像风格 {style}，回退为 {STYLE_FACE}")
 
-    content = await _download(url)
+    content = await download_image(url)
     if content is None:
         return None, f"获取头像失败：{player_name}\n请确认玩家名是否为正版名，或稍后重试"
 
@@ -119,7 +95,7 @@ async def fetch_avatar_png(player_name: str) -> Tuple[Optional[bytes], Optional[
 async def fetch_skin_png(player_name: str) -> Tuple[Optional[bytes], Optional[str]]:
     """拉取原始皮肤贴图 PNG（不重编码，可直接导入游戏）。"""
     url = f"https://mc-heads.net/skin/{player_name}"
-    content = await _download(url)
+    content = await download_image(url)
     if content is None:
         return None, f"获取皮肤失败：{player_name}\n请确认玩家名是否为正版名，或稍后重试"
 

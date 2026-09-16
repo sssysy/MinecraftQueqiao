@@ -39,22 +39,6 @@ def _client() -> httpx.AsyncClient:
     )
 
 
-async def _download_image(url: str) -> Optional[bytes]:
-    if not url:
-        return None
-    try:
-        async with _client() as client:
-            resp = await client.get(url)
-            if resp.status_code == 200 and resp.content:
-                return resp.content
-            logger.debug(
-                f"[MCQueQiao] 披风贴图下载失败 {url}: HTTP {resp.status_code}"
-            )
-    except Exception as e:
-        logger.debug(f"[MCQueQiao] 披风贴图下载异常 {url}: {type(e).__name__}: {e}")
-    return None
-
-
 async def fetch_owned_capes(
     mc_token: str,
     *,

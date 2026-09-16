@@ -4,17 +4,13 @@ from pathlib import Path
 import re
 from typing import Optional
 
-import httpx
 from gsuid_core.logger import logger
+
+from .downloader import download_image
 
 _TEXTURE2D_CAPES_DIR = (
     Path(__file__).parent.parent / "render" / "texture2d" / "capes"
 )
-
-HTTP_HEADERS = {
-    "User-Agent": "MCQueQiao/2.0 (cape-cache; +https://github.com)",
-}
-HTTP_TIMEOUT = 10.0
 
 
 def safe_cape_filename(alias: str) -> str:
@@ -39,7 +35,7 @@ def get_cape_texture_path(alias: str) -> Optional[Path]:
 async def get_cape_texture_bytes(
     alias: str, texture_url: str = ""
 ) -> Optional[bytes]:
-    """统一获取披风原始贴图字节（内置 texture2d 优先；若未内置且有 url 则在线获取）。"""
+    """统一获取披风原始贴图字节（内置 texture2d 优先；若未内置且有 url 则走 downloader）。"""
     # 1. 优先从内置 texture2d/capes 目录读取
     local_path = get_cape_texture_path(alias)
     if local_path is not None:
@@ -50,23 +46,7 @@ async def get_cape_texture_bytes(
                 f"[MCQueQiao] 读取内置披风贴图失败({local_path}): {e}"
             )
 
-    # 2. 内置未收录且提供了网络 URL，发起下载返回 bytes
+    # 2. 内置未收录且提供了网络 URL，走统一 downloader（image_tmp 缓存）
     if not texture_url:
         return None
-
-    try:
-        async with httpx.AsyncClient(
-            timeout=HTTP_TIMEOUT,
-            headers=HTTP_HEADERS,
-            follow_redirects=True,
-        ) as client:
-            resp = await client.get(texture_url)
-            if resp.status_code == 200 and resp.content:
-                return resp.content
-            logger.debug(
-                f"[MCQueQiao] 披风贴图下载失败 {texture_url}: HTTP {resp.status_code}"
-            )
-    except Exception as e:
-        logger.debug(f"[MCQueQiao] 披风贴图下载异常 {texture_url}: {e}")
-
-    return None
+    return await download_image(texture_url)
