@@ -6,6 +6,7 @@ from gsuid_core.sv import SV
 from ..mcqq_database import MCQQUserBind
 from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
 from ..utils.helpers.ms_auth import get_user_mc_token
+from ..utils.render import draw_my_capes
 from .service import (
     fetch_owned_capes,
     format_cape_list,
@@ -42,7 +43,12 @@ async def my_capes_command(bot: Bot, ev: Event) -> None:
     if not player_name:
         player_name = ev.user_id
 
-    await bot.send(format_cape_list(player_name, capes))
+    try:
+        img_bytes = await draw_my_capes(player_name, capes)
+        await bot.send(img_bytes)
+    except Exception as e:
+        logger.warning(f"[MCQueQiao] 渲染披风卡片失败，降级输出文本: {e}")
+        await bot.send(format_cape_list(player_name, capes))
 
 
 @sv_mc_capes.on_command("切换披风", block=True)

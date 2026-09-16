@@ -1,0 +1,149 @@
+/* ============================================================
+   Minecraft 我的披风卡片样式 (my_capes.css)
+   ============================================================ */
+
+.my-capes-card {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background-color: var(--mc-bg-color);
+    padding: 32px 36px;
+    box-sizing: border-box;
+    font-family: var(--mc-font-family);
+    color: var(--mc-text-white);
+}
+
+/* 顶部左上角标题 */
+.card-title {
+    font-size: 16px;
+    font-weight: normal;
+    color: var(--mc-text-white);
+    margin-bottom: 24px;
+    text-align: left;
+}
+
+/* 主体容器：左侧个人资料 + 右侧披风网格（上下居中对齐） */
+.card-body {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+/* 左侧：玩家头像与名字（上下垂直居中） */
+.profile-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 150px;
+    margin-right: 40px;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.player-avatar {
+    width: 140px;
+    height: 140px;
+    display: block;
+    image-rendering: pixelated;
+    border: none;
+    outline: none;
+}
+
+.player-name {
+    margin-top: 14px;
+    font-size: 20px;
+    line-height: 1.3;
+    text-align: center;
+    color: var(--mc-text-white);
+    word-break: break-all;
+    max-width: 150px;
+}
+
+/* 右侧：披风网格列表 */
+.capes-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.capes-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--capes-cols, 5), 104px);
+    gap: 20px 18px;
+    align-items: start;
+}
+
+/* 单个披风容器 */
+.cape-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 104px;
+    box-sizing: border-box;
+    border: none;
+    outline: none;
+}
+
+/* 披风图片外框（高度固定 128px） */
+.cape-img-box {
+    height: 128px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.cape-img {
+    height: 128px;
+    width: auto;
+    max-width: 104px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    display: block;
+    border: none;
+    outline: none;
+    box-sizing: border-box;
+}
+
+/* 已选中的披风：仅在披风图像外围描一圈亮绿边框 */
+.cape-item.is-active .cape-img {
+    outline: 2px solid var(--mc-active-green);
+    outline-offset: 0px;
+}
+
+/* 中文名（若无中文名则显示英文名） */
+.cape-name-cn {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.25;
+    color: var(--mc-text-white);
+    text-align: center;
+    word-break: break-word;
+    max-width: 104px;
+}
+
+/* 英文名（紧贴中文名） */
+.cape-name-en {
+    margin-top: 2px;
+    font-size: 11px;
+    line-height: 1.2;
+    color: var(--mc-text-gray);
+    text-align: center;
+    word-break: break-word;
+    max-width: 104px;
+}
+
+/* 底部声明信息 */
+.card-footer {
+    margin-top: 24px;
+    font-size: 10px;
+    font-weight: normal;
+    color: #777777;
+    text-align: center;
+    width: 100%;
+}
+
+.card-footer .footer-hl {
+    color: #ffffff;
+    font-weight: normal;
+}
