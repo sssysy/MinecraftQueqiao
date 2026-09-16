@@ -11,8 +11,8 @@ from typing import Any, Dict, Optional, Tuple
 import httpx
 from gsuid_core.logger import logger
 
-from ..mcqq_config import mcqq_config
-from ..mcqq_database import MCQQUserBind
+from ...mcqq_config import mcqq_config
+from ...mcqq_database import MCQQUserBind
 
 MS_DEVICE_CODE_URL = (
     "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode"
