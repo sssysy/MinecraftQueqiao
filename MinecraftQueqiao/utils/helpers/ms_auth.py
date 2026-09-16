@@ -22,6 +22,10 @@ MC_LOGIN_URL = (
 MC_PROFILE_URL = "https://api.minecraftservices.com/minecraft/profile"
 SCOPE = "XboxLive.signin offline_access"
 HTTP_TIMEOUT = 15.0
+HTTP_HEADERS = {
+    "User-Agent": "MCQueQiao/2.0 (ms-login; +https://github.com)",
+    "Accept": "application/json",
+}
 
 # 懒续期缓冲：临期 5 分钟内视为已过期
 TOKEN_EXPIRE_BUFFER = 300
@@ -46,7 +50,7 @@ class McProfile:
 
 
 def _client() -> httpx.AsyncClient:
-    return httpx.AsyncClient(timeout=HTTP_TIMEOUT)
+    return httpx.AsyncClient(timeout=HTTP_TIMEOUT, headers=HTTP_HEADERS)
 
 
 async def request_device_code(
@@ -165,7 +169,9 @@ async def _xbox_authenticate(
         return None, None, "Xbox Live 认证失败，请稍后重试"
 
     if resp.status_code != 200:
-        logger.warning(f"[MC·微软登录] Xbox 认证拒绝: HTTP {resp.status_code}")
+        logger.warning(
+            f"[MC·微软登录] Xbox 认证拒绝: HTTP {resp.status_code} body={data}"
+        )
         return None, None, "Xbox Live 认证失败，请稍后重试"
 
     token = data.get("Token")
@@ -199,7 +205,9 @@ async def _xsts_authorize(
 
     if resp.status_code != 200:
         xerr = data.get("XErr")
-        logger.warning(f"[MC·微软登录] XSTS 拒绝: HTTP {resp.status_code} XErr={xerr}")
+        logger.warning(
+            f"[MC·微软登录] XSTS 拒绝: HTTP {resp.status_code} XErr={xerr} body={data}"
+        )
         if xerr == 2148916233:
             return None, "该微软账号未加入 Xbox，请先注册 Xbox 档案"
         if xerr == 2148916238:
@@ -230,8 +238,19 @@ async def _mc_login_with_xbox(
         return None, None, "Minecraft 登录失败，请稍后重试"
 
     if resp.status_code != 200:
-        logger.warning(f"[MC·微软登录] MC 登录拒绝: HTTP {resp.status_code}")
-        return None, None, "Minecraft 登录失败，请确认该账号已拥有正版 Minecraft"
+        # 403 = 国际版服务未在该微软账号下查到 Minecraft 资格
+        logger.warning(
+            f"[MC·微软登录] MC 登录拒绝: HTTP {resp.status_code} body={data}"
+        )
+        if resp.status_code == 403:
+            return None, None, (
+                "Minecraft 登录被拒绝（无正版资格）\n"
+                "请确认：\n"
+                "1. 使用的是拥有【国际版 Java 版】的微软账号（中国版/网易版不适用）\n"
+                "2. 不是仅拥有基岩版、主机版或仅通过家庭共享\n"
+                "3. 可先用该账号打开一次 https://www.minecraft.net 确认角色名可见"
+            )
+        return None, None, "Minecraft 登录失败，请稍后重试"
 
     token = data.get("access_token")
     if not token:
