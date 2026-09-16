@@ -96,6 +96,16 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         ["正面大脸"],
         options=["正面大脸"],
     ),
+    "ms_client_id": GsStrConfig(
+        "微软应用客户端ID",
+        "Azure 应用注册的客户端(应用程序) ID，用于微软账号登录",
+        "86cda923-6960-40a4-b209-cf2f05871292",
+    ),
+    "ms_login_timeout": GsIntConfig(
+        "微软登录超时时间(秒)",
+        "设备代码登录的最长等待时间",
+        900,
+    ),
 }
 
 CONFIG_PATH = get_res_path() / "MinecraftQueqiao" / "config.json"
