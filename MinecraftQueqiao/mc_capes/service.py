@@ -14,7 +14,7 @@ HTTP_HEADERS = {
 }
 HTTP_TIMEOUT = 12.0
 
-CAPES_URL = "https://api.minecraftservices.com/minecraft/profile/capes"
+PROFILE_URL = "https://api.minecraftservices.com/minecraft/profile"
 ACTIVE_CAPE_URL = "https://api.minecraftservices.com/minecraft/profile/capes/active"
 
 NONE_ALIASES = frozenset({"无", "无披风", "none", "no", "null", "nonecape"})
@@ -63,7 +63,7 @@ async def fetch_owned_capes(
     try:
         async with _client() as client:
             resp = await client.get(
-                CAPES_URL,
+                PROFILE_URL,
                 headers={"Authorization": f"Bearer {mc_token}"},
             )
             data = resp.json()
