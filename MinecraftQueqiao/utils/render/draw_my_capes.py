@@ -73,6 +73,37 @@ def _bytes_to_data_uri(data: bytes, mime_type: str = "image/png") -> str:
     return f"data:{mime_type};base64,{b64}"
 
 
+def _process_cape_image(img_bytes: bytes) -> bytes:
+    """提取披风背面展示图案（64x32 展开贴图左上角 10:16 区域），并标准化为 80x128 像素风。"""
+    try:
+        from io import BytesIO
+        from PIL import Image
+
+        im = Image.open(BytesIO(img_bytes)).convert("RGBA")
+        w, h = im.size
+
+        # 若为 64x32 或类似展开贴图（长宽比大于 1.3）
+        if w > h:
+            scale = w / 64.0
+            crop_box = (
+                int(round(1 * scale)),
+                int(round(1 * scale)),
+                int(round(11 * scale)),
+                int(round(17 * scale)),
+            )
+            cropped = im.crop(crop_box)
+            resized = cropped.resize((80, 128), Image.NEAREST)
+        else:
+            resized = im.resize((80, 128), Image.NEAREST)
+
+        buf = BytesIO()
+        resized.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception as e:
+        logger.warning(f"[MCQueQiao] 披风贴图处理异常: {e}")
+        return img_bytes
+
+
 def render_my_capes_html(
     player_name: str,
     capes: Sequence[Any],
@@ -121,7 +152,8 @@ def render_my_capes_html(
 
         img_bytes = getattr(item, "image", None)
         if img_bytes and isinstance(img_bytes, bytes):
-            img_uri = _bytes_to_data_uri(img_bytes)
+            processed_bytes = _process_cape_image(img_bytes)
+            img_uri = _bytes_to_data_uri(processed_bytes)
         else:
             img_uri = no_capes_uri
 

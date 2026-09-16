@@ -7,7 +7,7 @@
     flex-direction: column;
     align-items: flex-start;
     background-color: var(--mc-bg-color);
-    padding: 32px 36px;
+    padding: 32px 36px 14px 36px;
     box-sizing: border-box;
     font-family: var(--mc-font-family);
     color: var(--mc-text-white);
@@ -84,8 +84,9 @@
     outline: none;
 }
 
-/* 披风图片外框（高度固定 128px） */
+/* 披风图片外框（80x128） */
 .cape-img-box {
+    width: 80px;
     height: 128px;
     display: flex;
     align-items: center;
@@ -94,9 +95,8 @@
 }
 
 .cape-img {
+    width: 80px;
     height: 128px;
-    width: auto;
-    max-width: 104px;
     object-fit: contain;
     image-rendering: pixelated;
     display: block;
@@ -135,7 +135,7 @@
 
 /* 底部声明信息 */
 .card-footer {
-    margin-top: 24px;
+    margin-top: 20px;
     font-size: 10px;
     font-weight: normal;
     color: #777777;
