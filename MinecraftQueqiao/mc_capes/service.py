@@ -7,6 +7,7 @@ import httpx
 from gsuid_core.logger import logger
 
 from .map import get_display_name
+from ..utils.helpers.cape_cache import get_cape_texture_bytes
 
 HTTP_HEADERS = {
     "User-Agent": "MCQueQiao/2.0 (capes; +https://github.com)",
@@ -96,7 +97,9 @@ async def fetch_owned_capes(
 
     if with_images:
         for item in items:
-            item.image = await _download_image(item.texture_url)
+            item.image = await get_cape_texture_bytes(
+                item.alias, item.texture_url
+            )
 
     return items, None
 
