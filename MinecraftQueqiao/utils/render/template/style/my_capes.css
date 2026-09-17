@@ -6,44 +6,54 @@
     display: inline-flex;
     flex-direction: column;
     align-items: flex-start;
-    background-color: var(--mc-bg-color);
-    padding: 32px 36px 14px 36px;
+    background-color: #171615;
+    border: 4px solid #1a1a1a;
     box-sizing: border-box;
     font-family: var(--mc-font-family);
-    color: var(--mc-text-white);
+    color: #222222;
 }
 
-/* 顶部左上角标题 */
+/* 顶部标题：草方块绿 + 大字号 */
 .card-title {
-    font-size: 16px;
-    font-weight: normal;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #79C05A;
     color: var(--mc-text-white);
-    margin-bottom: 24px;
-    text-align: left;
+    font-size: 36px;
+    font-weight: bold;
+    letter-spacing: 10px;
+    text-align: center;
+    padding: 16px 24px 18px;
+    text-indent: 10px;
+    border-bottom: 4px solid #4e8a3a;
 }
 
-/* 主体容器：左侧个人资料 + 右侧披风网格（上下居中对齐） */
+/* 主体容器：左侧玩家信息 + 右侧披风网格 */
 .card-body {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: stretch;
+    width: 100%;
 }
 
-/* 左侧：玩家头像与名字（上下垂直居中） */
+/* 左侧：石砖灰（调淡）+ 分割线；头像与名字上下居中 */
 .profile-section {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 150px;
-    margin-right: 40px;
+    width: 186px;
     flex-shrink: 0;
-    align-self: center;
+    align-self: stretch;
+    background-color: #9A9A9A;
+    border-right: 4px solid #7a7a7a;
+    padding: 24px 16px;
+    box-sizing: border-box;
 }
 
 .player-avatar {
-    width: 140px;
-    height: 140px;
+    width: 104px;
+    height: 104px;
     display: block;
     image-rendering: pixelated;
     border: none;
@@ -51,8 +61,8 @@
 }
 
 .player-name {
-    margin-top: 14px;
-    font-size: 20px;
+    margin-top: 12px;
+    font-size: 18px;
     line-height: 1.3;
     text-align: center;
     color: var(--mc-text-white);
@@ -60,10 +70,15 @@
     max-width: 150px;
 }
 
-/* 右侧：披风网格列表 */
+/* 右侧：白色底 + 披风网格 */
 .capes-section {
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    background-color: #ffffff;
+    padding: 28px 36px;
+    flex: 1;
+    box-sizing: border-box;
 }
 
 .capes-grid {
@@ -105,42 +120,52 @@
     box-sizing: border-box;
 }
 
-/* 已选中的披风：仅在披风图像外围描一圈亮绿边框 */
+/* 已应用的披风：墨绿描边（略加宽） */
 .cape-item.is-active .cape-img {
-    outline: 2px solid var(--mc-active-green);
+    outline: 3px solid #1B5E20;
     outline-offset: 0px;
 }
 
-/* 中文名（若无中文名则显示英文名） */
+/* 中文名（白底用深色） */
 .cape-name-cn {
     margin-top: 6px;
     font-size: 13px;
     line-height: 1.25;
-    color: var(--mc-text-white);
+    color: #222222;
     text-align: center;
     word-break: break-word;
     max-width: 104px;
 }
 
-/* 英文名（紧贴中文名） */
+/* 英文名 */
 .cape-name-en {
     margin-top: 2px;
     font-size: 11px;
     line-height: 1.2;
-    color: var(--mc-text-gray);
+    color: #777777;
     text-align: center;
     word-break: break-word;
     max-width: 104px;
 }
 
-/* 底部声明信息 */
+/* 已应用披风：文本同为墨绿 */
+.cape-item.is-active .cape-name-cn,
+.cape-item.is-active .cape-name-en {
+    color: #1B5E20;
+}
+
+/* 底部声明信息：黑色底 + 顶部分割线 */
 .card-footer {
-    margin-top: 20px;
+    width: 100%;
+    margin-top: 0;
+    padding: 8px 12px 10px;
     font-size: 10px;
     font-weight: normal;
     color: #777777;
     text-align: center;
-    width: 100%;
+    background-color: #171615;
+    border-top: 2px solid #2e2e2e;
+    box-sizing: border-box;
 }
 
 .card-footer .footer-hl {
