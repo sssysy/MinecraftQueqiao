@@ -25,6 +25,22 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
+      },
+      {
+        "name": "登录",
+        "desc": "微软账号设备码登录",
+        "eg": "登录",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "退出登录",
+        "desc": "退出当前微软账号登录",
+        "eg": "退出登录",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
       }
     ]
   },
@@ -119,7 +135,7 @@
       {
         "name": "服务器状态",
         "desc": "查看服务器状态",
-        "eg": "服务器 (Server)",
+        "eg": "服务器",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
@@ -135,7 +151,7 @@
       {
         "name": "头像",
         "desc": "查询玩家正版头像",
-        "eg": "头像 [Notch|@用户]",
+        "eg": "头像 Notch",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
@@ -143,7 +159,23 @@
       {
         "name": "皮肤",
         "desc": "查询玩家正版皮肤",
-        "eg": "皮肤 [Notch|@用户]",
+        "eg": "皮肤 Notch",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "我的披风",
+        "desc": "查看账户拥有的披风",
+        "eg": "我的披风",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "切换披风",
+        "desc": "切换当前披风，无为卸下",
+        "eg": "切换披风 樱花披风",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
