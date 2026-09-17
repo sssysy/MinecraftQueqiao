@@ -1,0 +1,33 @@
+/* ============================================================
+   MinecraftQueqiao 通用样式库 - 基础与变量 (common.css)
+   ============================================================ */
+
+@font-face {
+    font-family: 'Minecraft';
+    font-style: normal;
+    font-weight: normal;
+    src: url('/fonts/mc-unicode-font.otf') format('opentype');
+}
+
+:root {
+    --mc-bg-color: #171615;
+    --mc-text-white: #ffffff;
+    --mc-text-gray: #a8a8a8;
+    --mc-active-green: #55FF55;
+    --mc-font-family: 'Minecraft', -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    background: transparent;
+    display: inline-block;
+    font-family: var(--mc-font-family);
+    color: var(--mc-text-white);
+}

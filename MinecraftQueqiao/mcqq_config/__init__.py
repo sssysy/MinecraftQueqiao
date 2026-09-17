@@ -90,6 +90,22 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "当access_token为空时校验",
         ["127.0.0.1"],
     ),
+    "avatar_style": GsListStrConfig(
+        "头像图片风格",
+        "发送的图片风格，多选则从已选中随机抽取",
+        ["正面大脸"],
+        options=["正面大脸"],
+    ),
+    "ms_client_id": GsStrConfig(
+        "Azure 客户端(应用程序) ID",
+        "用于登录命令调用 Microsoft 验证，需要申请应用白名单 (详见 https://aka.ms/AppRegInfo)，普通用户保持默认即可",
+        "2591d784-2759-4ace-8858-24620f9e460b",
+    ),
+    "ms_login_timeout": GsIntConfig(
+        "微软登录超时时间(秒)",
+        "设备代码登录的最长等待时间",
+        900,
+    ),
 }
 
 CONFIG_PATH = get_res_path() / "MinecraftQueqiao" / "config.json"

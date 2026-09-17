@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../style/common.css">
+    <link rel="stylesheet" href="../style/my_capes.css">
+</head>
+<body>
+    <div class="my-capes-card">
+        <!-- 顶部左上角标题 -->
+        <div class="card-title">可用披风</div>
+
+        <!-- 主体：左侧头像居中 + 右侧披风网格 -->
+        <div class="card-body">
+            <div class="profile-section">
+                <img class="player-avatar" src="{{avatar_url}}" alt="">
+                <div class="player-name">{{player_name}}</div>
+            </div>
+
+            <div class="capes-section">
+                <div class="capes-grid" style="--capes-cols: {{cols_count}};">
+                    {{capes_grid_html}}
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部信息 -->
+        <div class="card-footer">
+            Create by <span class="footer-hl">GsCore</span> &amp; Power by <span class="footer-hl">MinecraftQueqiao</span> &amp; Auther by <span class="footer-hl">sssysy</span>
+        </div>
+    </div>
+</body>
+</html>

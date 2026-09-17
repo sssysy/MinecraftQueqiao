@@ -20,6 +20,7 @@ exec_list.extend(
         "ALTER TABLE MCQQServer ADD COLUMN display_name TEXT DEFAULT ''",
         "ALTER TABLE MCQQServer ADD COLUMN server_address TEXT DEFAULT ''",
         "ALTER TABLE MCQQBind ADD COLUMN is_main INTEGER DEFAULT 0",
+        "ALTER TABLE MCQQUserBind ADD COLUMN token TEXT DEFAULT ''",
     ]
 )
 
@@ -278,6 +279,7 @@ class MCQQUserBind(BaseIDModel, table=True):
     user_id: str = Field(default="", title="用户ID")
     player_name: str = Field(default="", title="MC游戏ID")
     bot_id: str = Field(default="", title="平台")
+    token: str = Field(default="", title="微软登录Token")
 
     @classmethod
     @with_session

@@ -25,6 +25,22 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
+      },
+      {
+        "name": "登录",
+        "desc": "微软账号设备码登录",
+        "eg": "登录",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "退出登录",
+        "desc": "退出当前微软账号登录",
+        "eg": "退出登录",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
       }
     ]
   },
@@ -94,6 +110,22 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
+      },
+      {
+        "name": "切换主服务器",
+        "desc": "设置当前群对应的主服务器",
+        "eg": "切换主服务器 Server",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "刷新定时公告",
+        "desc": "重新加载并注册定时公告任务",
+        "eg": "刷新定时公告",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
       }
     ]
   },
@@ -103,7 +135,7 @@
       {
         "name": "服务器状态",
         "desc": "查看服务器状态",
-        "eg": "服务器 (Server)",
+        "eg": "服务器",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
@@ -112,6 +144,38 @@
         "name": "私信",
         "desc": "向指定绑定的玩家或游戏ID发送私聊",
         "eg": "私信 Notch 我先下了",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "头像",
+        "desc": "查询玩家正版头像",
+        "eg": "头像 Notch",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "皮肤",
+        "desc": "查询玩家正版皮肤",
+        "eg": "皮肤 Notch",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "我的披风",
+        "desc": "查看账户拥有的披风",
+        "eg": "我的披风",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "切换披风",
+        "desc": "切换当前披风，无为卸下",
+        "eg": "切换披风 樱花披风",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
@@ -179,7 +243,7 @@
       },
       {
         "name": "玩家传送",
-        "desc": "传送到玩家位置",
+        "desc": "游戏内发起/接受/拒绝玩家传送请求",
         "eg": "tpa Notch",
         "need_ck": false,
         "need_sk": false,
