@@ -108,19 +108,23 @@ async def _upsert_server(
     access_token: str,
     server_address: str,
     chatimage_enabled: bool,
+    description: Optional[str] = None,
 ) -> str:
     """写入或覆盖服务器配置，返回「新增」/「更新」。"""
     existing = await MCQQServer.get_by_name(server_name)
     if existing:
+        updates: Dict[str, Any] = {
+            "display_name": display_name,
+            "access_token": access_token,
+            "server_address": server_address,
+            "chatimage_enabled": chatimage_enabled,
+            "enabled": True,
+        }
+        if description is not None:
+            updates["description"] = description
         await MCQQServer.update_data_by_data(
             {"server_name": server_name},
-            {
-                "display_name": display_name,
-                "access_token": access_token,
-                "server_address": server_address,
-                "chatimage_enabled": chatimage_enabled,
-                "enabled": True,
-            },
+            updates,
         )
         logger.info(f"[MCQueQiao] 服务器 '{server_name}' 配置已覆盖更新")
         return "更新"
@@ -131,6 +135,7 @@ async def _upsert_server(
         access_token=access_token,
         server_address=server_address,
         chatimage_enabled=chatimage_enabled,
+        description=description or "",
         enabled=True,
     )
     logger.info(f"[MCQueQiao] 新增服务器 '{server_name}' 成功")
@@ -148,6 +153,8 @@ async def _finish_add(bot: Bot, data: Dict[str, Any]) -> None:
     display_name = data.get("display_name", "")
     access_token = data.get("access_token", "")
     chatimage_enabled = bool(data.get("chatimage_enabled", False))
+    # None = 不改动原说明（一次性传参）；str = 覆盖写入（分步交互）
+    description = data.get("description", None)
 
     action = await _upsert_server(
         server_name=server_name,
@@ -155,6 +162,7 @@ async def _finish_add(bot: Bot, data: Dict[str, Any]) -> None:
         access_token=access_token,
         server_address=server_address,
         chatimage_enabled=chatimage_enabled,
+        description=description if isinstance(description, str) else None,
     )
     _ai_return(
         f"{action}服务器 '{server_name}' 成功："
@@ -233,7 +241,7 @@ async def add_server_command(bot: Bot, ev: Event) -> None:
             return None
         return resp.text.strip()
 
-    server_name = await _ask_step("[1/5] 请输入服务器名称(鹊桥 server_name)")
+    server_name = await _ask_step("[1/6] 请输入服务器名称(鹊桥 server_name)")
     if server_name is None:
         _ai_return(
             f"错误：交互未完成，缺少服务器名、服务器IP等参数。{_MISSING_HINT}"
@@ -242,7 +250,7 @@ async def add_server_command(bot: Bot, ev: Event) -> None:
         return
 
     display_name_raw = await _ask_step(
-        '[2/5] 请输入服务器外显名(若无输入"跳过")'
+        '[2/6] 请输入服务器外显名(若无输入"跳过")'
     )
     if display_name_raw is None:
         _ai_return(
@@ -253,7 +261,7 @@ async def add_server_command(bot: Bot, ev: Event) -> None:
     display_name = "" if _is_skip(display_name_raw) else display_name_raw
 
     access_token_raw = await _ask_step(
-        '[3/5] 请输入access_token(若无输入"跳过")'
+        '[3/6] 请输入access_token(若无输入"跳过")'
     )
     if access_token_raw is None:
         _ai_return(
@@ -263,13 +271,13 @@ async def add_server_command(bot: Bot, ev: Event) -> None:
         return
     access_token = "" if _is_skip(access_token_raw) else access_token_raw
 
-    server_address = await _ask_step("[4/5] 请输入 MC 服务器 IP")
+    server_address = await _ask_step("[4/6] 请输入 MC 服务器 IP")
     if server_address is None:
         _ai_return(f"错误：交互未完成，缺少服务器IP。{_MISSING_HINT}")
         await bot.send("绑定超时，请重新开始。")
         return
 
-    chatimage_raw = await _ask_step("[5/5] 启用 ChatImage Mod(是 / 否)")
+    chatimage_raw = await _ask_step("[5/6] 启用 ChatImage Mod(是 / 否)")
     if chatimage_raw is None:
         _ai_return(
             "错误：交互未完成，ChatImage 未确认，可默认否后重试。"
@@ -277,6 +285,18 @@ async def add_server_command(bot: Bot, ev: Event) -> None:
         )
         await bot.send("绑定超时，请重新开始。")
         return
+
+    description_raw = await _ask_step(
+        '[6/6] 请输入服务器说明(若无输入"跳过")'
+    )
+    if description_raw is None:
+        _ai_return(
+            "错误：交互未完成，服务器说明未确认，可默认跳过后重试。"
+            f"{_MISSING_HINT}"
+        )
+        await bot.send("绑定超时，请重新开始。")
+        return
+    description = "" if _is_skip(description_raw) else description_raw
 
     await _finish_add(
         bot,
@@ -286,6 +306,7 @@ async def add_server_command(bot: Bot, ev: Event) -> None:
             "access_token": access_token,
             "server_address": server_address,
             "chatimage_enabled": _parse_chatimage(chatimage_raw),
+            "description": description,
         },
     )
 

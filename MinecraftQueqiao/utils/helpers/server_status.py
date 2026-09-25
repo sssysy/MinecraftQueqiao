@@ -100,7 +100,9 @@ async def query_mc_status(address: str, timeout: float = 3.5) -> Any:
         return None
 
 
-def format_status_lines(name: str, addr: str, status: Any) -> str:
+def format_status_lines(
+    name: str, addr: str, status: Any, description: str = ""
+) -> str:
     """格式化 mcstatus 返回的服务器状态"""
     lines = ["服务器状态"]
     if addr and addr != "未配置":
@@ -141,10 +143,16 @@ def format_status_lines(name: str, addr: str, status: Any) -> str:
             if player_names:
                 lines.append(f"列表：{', '.join(player_names)}")
 
+        note = (description or "").strip()
+        if note:
+            lines.append(f"说明：{note}")
         return "\n".join(lines)
 
     # 直连失败/离线
     lines.append("状态：离线")
+    note = (description or "").strip()
+    if note:
+        lines.append(f"说明：{note}")
     return "\n".join(lines)
 
 
@@ -156,7 +164,9 @@ async def get_server_status_text(server: MCQQServer) -> str:
         addr = server.server_name.strip()
 
     status = await query_mc_status(addr) if addr else None
-    return format_status_lines(name, addr, status)
+    return format_status_lines(
+        name, addr, status, description=getattr(server, "description", "") or ""
+    )
 
 
 async def get_address_status_text(addr: str) -> str:
