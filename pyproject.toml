@@ -1,6 +1,6 @@
 [project]
 name = "MinecraftQueqiao"
-version = "1.0.0"
+version = "1.1.0"
 description = "我的世界鹊桥群服互联插件"
 authors = [
     {name = "sssysy", email = "sssysy@vip.qq.com"},

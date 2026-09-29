@@ -1,1 +1,1 @@
-MCQQVersion = "1.0.0"
+MCQQVersion = "1.1.0"

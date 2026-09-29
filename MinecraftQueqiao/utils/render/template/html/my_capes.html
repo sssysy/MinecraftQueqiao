@@ -7,20 +7,22 @@
 </head>
 <body>
     <div class="my-capes-card">
-        <!-- 顶部左上角标题 -->
-        <div class="card-title">可用披风</div>
-
-        <!-- 主体：左侧头像居中 + 右侧披风网格 -->
-        <div class="card-body">
-            <div class="profile-section">
+        <!-- 顶部：头像 + 用户名 + 右上角 logo -->
+        <div class="profile-bar">
+            <div class="profile-left">
                 <img class="player-avatar" src="{{avatar_url}}" alt="">
-                <div class="player-name">{{player_name}}</div>
-            </div>
-
-            <div class="capes-section">
-                <div class="capes-grid" style="--capes-cols: {{cols_count}};">
-                    {{capes_grid_html}}
+                <div class="profile-text">
+                    <div class="player-name">{{player_name}}</div>
+                    <div class="player-sub">已拥有披风</div>
                 </div>
+            </div>
+            <img class="mc-logo" src="{{logo_url}}" alt="Minecraft">
+        </div>
+
+        <!-- 披风网格：无底无边框，3 列 -->
+        <div class="capes-wrap">
+            <div class="capes-grid">
+                {{capes_grid_html}}
             </div>
         </div>
 

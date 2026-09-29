@@ -33,6 +33,9 @@ CAPE_NAME_MAP: dict[str, str] = {
     "Moonlight Trail": "月光小径披风",
     "Scrolls Champion": "Scrolls 冠军披风",
     "Mojang": "Mojang 披风",
+    "Aurora": "极光披风",
+    "Hero": "英雄披风",
+    "Twisted": "扭曲披风",
 }
 
 

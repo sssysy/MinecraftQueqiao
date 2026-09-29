@@ -16,23 +16,11 @@ if TYPE_CHECKING:
 _RENDER_DIR = Path(__file__).parent
 _HTML_TEMPLATE_PATH = _RENDER_DIR / "template" / "html" / "my_capes.html"
 _TEXTURE2D_DIR = _RENDER_DIR / "texture2d"
-_NO_CAPES_PNG = _TEXTURE2D_DIR / "no_capes.png"
 _DEFAULT_AVATAR_PNG = _TEXTURE2D_DIR / "default_head.png"
+_MCLOGO_PNG = _TEXTURE2D_DIR / "mclogo.png"
 
-_NO_CAPES_B64: str | None = None
 _DEFAULT_AVATAR_B64: str | None = None
-
-
-def _get_no_capes_data_uri() -> str:
-    global _NO_CAPES_B64
-    if _NO_CAPES_B64 is None:
-        if _NO_CAPES_PNG.exists():
-            data = _NO_CAPES_PNG.read_bytes()
-            b64 = base64.b64encode(data).decode("ascii")
-            _NO_CAPES_B64 = f"data:image/png;base64,{b64}"
-        else:
-            _NO_CAPES_B64 = ""
-    return _NO_CAPES_B64
+_MCLOGO_B64: str | None = None
 
 
 def _get_default_avatar_data_uri() -> str:
@@ -45,6 +33,18 @@ def _get_default_avatar_data_uri() -> str:
         else:
             _DEFAULT_AVATAR_B64 = ""
     return _DEFAULT_AVATAR_B64
+
+
+def _get_mclogo_data_uri() -> str:
+    global _MCLOGO_B64
+    if _MCLOGO_B64 is None:
+        if _MCLOGO_PNG.exists():
+            data = _MCLOGO_PNG.read_bytes()
+            b64 = base64.b64encode(data).decode("ascii")
+            _MCLOGO_B64 = f"data:image/png;base64,{b64}"
+        else:
+            _MCLOGO_B64 = ""
+    return _MCLOGO_B64
 
 
 def _bytes_to_data_uri(data: bytes, mime_type: str = "image/png") -> str:
@@ -92,7 +92,6 @@ def render_my_capes_html(
     template = _HTML_TEMPLATE_PATH.read_text(encoding="utf-8")
     display_player_name = html_lib.escape(player_name or "Steve")
 
-    no_capes_uri = _get_no_capes_data_uri()
     has_active = any(bool(getattr(c, "is_active", False)) for c in capes)
 
     # 第一项固定为「无」
@@ -100,10 +99,8 @@ def render_my_capes_html(
 
     none_active_cls = " is-active" if not has_active else ""
     items_html_parts.append(
-        f'<div class="cape-item{none_active_cls}">'
-        f'  <div class="cape-img-box">'
-        f'    <img class="cape-img" src="{no_capes_uri}" alt="无">'
-        f"  </div>"
+        f'<div class="cape-item none{none_active_cls}">'
+        f'  <div class="cape-none-box">无</div>'
         f'  <div class="cape-name-cn">无</div>'
         f'  <div class="cape-name-en">None</div>'
         f"</div>"
@@ -134,25 +131,20 @@ def render_my_capes_html(
             processed_bytes = _process_cape_image(img_bytes)
             img_uri = _bytes_to_data_uri(processed_bytes)
         else:
-            img_uri = no_capes_uri
+            img_uri = ""
 
         items_html_parts.append(
             f'<div class="cape-item{active_cls}">'
-            f'  <div class="cape-img-box">'
-            f'    <img class="cape-img" src="{img_uri}" alt="{alt_text}">'
-            f"  </div>"
+            f'  <img class="cape-img" src="{img_uri}" alt="{alt_text}">'
             f"  {name_blocks}"
             f"</div>"
         )
 
-    total_items = len(items_html_parts)
-    cols_count = min(max(total_items, 1), 5)
-
     replacements = {
         "player_name": display_player_name,
         "avatar_url": avatar_data_uri,
+        "logo_url": _get_mclogo_data_uri(),
         "capes_grid_html": "\n".join(items_html_parts),
-        "cols_count": str(cols_count),
     }
 
     return fill_template(template, replacements)
@@ -181,7 +173,7 @@ async def draw_my_capes(
     return await render_html(
         html_content,
         ".my-capes-card",
-        viewport_width=1200,
+        viewport_width=700,
         viewport_height=900,
         device_scale_factor=2.0,
     )
