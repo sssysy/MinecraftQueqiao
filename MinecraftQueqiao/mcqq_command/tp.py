@@ -8,7 +8,7 @@ from ..utils.waypoint import qq as waypoint_qq
 sv_mcqq_tp = SV("鹊桥传送指令")
 
 
-@sv_mcqq_tp.on_command(("tp列表", "传送点列表", "路径点列表"), block=True)
+@sv_mcqq_tp.on_command(("tp列表", "传送点列表", "路径点列表", "tplist"), block=True)
 async def list_waypoint_command(bot: Bot, ev: Event) -> None:
     await waypoint_qq.handle_list_waypoint(bot, ev)
 
@@ -31,17 +31,17 @@ async def teleport_command(bot: Bot, ev: Event) -> None:
     await waypoint_qq.handle_teleport(bot, ev, point_name=args[0])
 
 
-@sv_mcqq_tp.on_command(("增加全局tp", "添加全局tp"), block=True)
+@sv_mcqq_tp.on_command(("增加全局tp", "添加全局tp", "addgtp"), block=True)
 async def add_global_waypoint_command(bot: Bot, ev: Event) -> None:
     await waypoint_qq.handle_add_waypoint(bot, ev, is_global=True)
 
 
-@sv_mcqq_tp.on_command(("增加tp", "添加tp"), block=True)
+@sv_mcqq_tp.on_command(("增加tp", "添加tp", "deltp"), block=True)
 async def add_personal_waypoint_command(bot: Bot, ev: Event) -> None:
     await waypoint_qq.handle_add_waypoint(bot, ev, is_global=False)
 
 
-@sv_mcqq_tp.on_command("删除全局tp", block=True)
+@sv_mcqq_tp.on_command(("删除全局tp", "delgtp"), block=True)
 async def delete_global_waypoint_command(bot: Bot, ev: Event) -> None:
     args, err = parse_positional(ev.text, min_args=1, max_args=1, names=("路径点名称",))
     if err:
@@ -50,7 +50,7 @@ async def delete_global_waypoint_command(bot: Bot, ev: Event) -> None:
     await waypoint_qq.handle_delete_waypoint(bot, ev, is_global=True, point_name=args[0])
 
 
-@sv_mcqq_tp.on_command("删除tp", block=True)
+@sv_mcqq_tp.on_command(("删除tp", "deltp"), block=True)
 async def delete_personal_waypoint_command(bot: Bot, ev: Event) -> None:
     args, err = parse_positional(ev.text, min_args=1, max_args=1, names=("路径点名称",))
     if err:

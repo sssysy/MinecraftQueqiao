@@ -56,7 +56,7 @@ async def _del(
     await service.tellraw(server_name, player_name, msg, "green" if ok else "red")
 
 
-@ingame.on_command("tp列表", "传送点列表", "路径点列表")
+@ingame.on_command("tp列表", "传送点列表", "路径点列表", "tplist")
 async def _list(server_name: str, player_name: str, args: str) -> None:
     if args.strip():
         await service.tellraw(
@@ -74,7 +74,7 @@ async def _list(server_name: str, player_name: str, args: str) -> None:
     )
 
 
-@ingame.on_command("增加全局tp", "添加全局tp", need_admin=True)
+@ingame.on_command("增加全局tp", "添加全局tp", "addgtp", need_admin=True)
 async def _add_global(server_name: str, player_name: str, args: str) -> None:
     await _add(
         server_name,
@@ -85,7 +85,7 @@ async def _add_global(server_name: str, player_name: str, args: str) -> None:
     )
 
 
-@ingame.on_command("增加tp", "添加tp")
+@ingame.on_command("增加tp", "添加tp", "addtp")
 async def _add_personal(server_name: str, player_name: str, args: str) -> None:
     await _add(
         server_name,
@@ -96,7 +96,7 @@ async def _add_personal(server_name: str, player_name: str, args: str) -> None:
     )
 
 
-@ingame.on_command("删除全局tp", need_admin=True)
+@ingame.on_command("删除全局tp", "delgtp", need_admin=True)
 async def _del_global(server_name: str, player_name: str, args: str) -> None:
     await _del(
         server_name,
@@ -107,7 +107,7 @@ async def _del_global(server_name: str, player_name: str, args: str) -> None:
     )
 
 
-@ingame.on_command("删除tp")
+@ingame.on_command("删除tp", "deltp")
 async def _del_personal(server_name: str, player_name: str, args: str) -> None:
     await _del(
         server_name,
