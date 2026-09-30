@@ -3,9 +3,11 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.sv import SV
 
+from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQUserBind
 from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
 from ..utils.helpers.ms_auth import get_user_mc_token
+from ..utils.helpers.user_select import extract_at_user_ids
 from ..utils.render import draw_my_capes
 from .service import (
     fetch_owned_capes,
@@ -27,11 +29,17 @@ async def my_capes_command(bot: Bot, ev: Event) -> None:
         await bot.send(f"参数传递错误\n{LIST_USAGE}")
         return
 
-    bind = await MCQQUserBind.get_by_user_id(ev.user_id)
+    allow_at = bool(mcqq_config.get_config("at_query_account_enabled").data)
+    at_users = extract_at_user_ids(ev) if allow_at else []
+    target_uid = at_users[0] if at_users else ev.user_id
+
+    bind = await MCQQUserBind.get_by_user_id(target_uid)
     player_name = bind.player_name if bind and bind.player_name else ""
 
-    mc_token, err = await get_user_mc_token(ev.user_id)
+    mc_token, err = await get_user_mc_token(target_uid)
     if err or not mc_token:
+        if target_uid != ev.user_id and err and "尚未登录" in err:
+            err = "该用户尚未登录微软账号"
         await bot.send(err or "获取披风失败")
         return
 
@@ -41,7 +49,7 @@ async def my_capes_command(bot: Bot, ev: Event) -> None:
         return
 
     if not player_name:
-        player_name = ev.user_id
+        player_name = target_uid
 
     try:
         img_bytes = await draw_my_capes(player_name, capes)

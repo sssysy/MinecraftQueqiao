@@ -90,6 +90,11 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "当access_token为空时校验",
         ["127.0.0.1"],
     ),
+    "at_query_account_enabled": GsBoolConfig(
+        "允许AT他人查询游戏账户信息",
+        "开启后 mc头像/mc皮肤/mc我的披风 可用 @用户 查询他人；关闭时忽略 @，仅查询自己",
+        False,
+    ),
     "avatar_style": GsListStrConfig(
         "头像图片风格",
         "发送的图片风格，多选则从已选中随机抽取",

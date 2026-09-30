@@ -37,7 +37,8 @@ async def resolve_target_player_name(
     Returns:
         (player_name, err)
     """
-    at_users = extract_at_user_ids(ev)
+    allow_at = bool(mcqq_config.get_config("at_query_account_enabled").data)
+    at_users = extract_at_user_ids(ev) if allow_at else []
     tokens = split_cmd_args(ev.text)
 
     if at_users:
