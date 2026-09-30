@@ -101,6 +101,11 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         ["正面大脸"],
         options=["正面大脸"],
     ),
+    "html_render_enabled": GsBoolConfig(
+        "使用 HTML 渲染图片",
+        "关闭后将使用PIL渲染图片。PIL渲染性能极佳，但不能保证渲染效果",
+        True,
+    ),
     "mojang_api_base": GsStrConfig(
         "正版名查询API地址",
         "Mojang 用户名转 UUID 接口的 base URL",

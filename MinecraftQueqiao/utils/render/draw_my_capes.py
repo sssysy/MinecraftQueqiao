@@ -144,6 +144,7 @@ def render_my_capes_html(
         "player_name": display_player_name,
         "avatar_url": avatar_data_uri,
         "logo_url": _get_mclogo_data_uri(),
+        "capes_grid_class": " is-centered" if len(capes) < 3 else "",
         "capes_grid_html": "\n".join(items_html_parts),
     }
 

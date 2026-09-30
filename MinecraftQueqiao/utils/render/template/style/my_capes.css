@@ -74,6 +74,17 @@
     gap: 18px 10px;
 }
 
+/* 披风数 < 3：整行居中；≥ 3 保持 3 列左对齐（末行不满也左对齐） */
+.capes-grid.is-centered {
+    display: flex;
+    justify-content: center;
+    gap: 18px 10px;
+}
+
+.capes-grid.is-centered .cape-item {
+    width: 160px;
+}
+
 .cape-item {
     display: flex;
     flex-direction: column;

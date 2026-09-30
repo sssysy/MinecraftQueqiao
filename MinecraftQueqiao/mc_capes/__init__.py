@@ -8,7 +8,7 @@ from ..mcqq_database import MCQQUserBind
 from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
 from ..utils.helpers.ms_auth import get_user_mc_token
 from ..utils.helpers.user_select import extract_at_user_ids
-from ..utils.render import draw_my_capes
+from ..utils.render import draw_my_capes, draw_my_capes_pil
 from .service import (
     fetch_owned_capes,
     format_cape_list,
@@ -52,7 +52,10 @@ async def my_capes_command(bot: Bot, ev: Event) -> None:
         player_name = target_uid
 
     try:
-        img_bytes = await draw_my_capes(player_name, capes)
+        if bool(mcqq_config.get_config("html_render_enabled").data):
+            img_bytes = await draw_my_capes(player_name, capes)
+        else:
+            img_bytes = draw_my_capes_pil(player_name, capes)
         await bot.send(img_bytes)
     except Exception as e:
         logger.warning(f"[MCQueQiao] 渲染披风卡片失败，降级输出文本: {e}")
