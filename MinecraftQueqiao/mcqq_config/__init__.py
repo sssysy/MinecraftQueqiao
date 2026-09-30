@@ -96,6 +96,21 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         ["正面大脸"],
         options=["正面大脸"],
     ),
+    "mojang_api_base": GsStrConfig(
+        "正版名查询API地址",
+        "Mojang 用户名转 UUID 接口的 base URL",
+        "https://api.mojang.com",
+    ),
+    "mojang_session_base": GsStrConfig(
+        "正版档案API地址",
+        "Mojang UUID 转皮肤档案接口的 base URL",
+        "https://sessionserver.mojang.com",
+    ),
+    "mojang_texture_base": GsStrConfig(
+        "皮肤纹理CDN地址",
+        "Mojang 皮肤纹理 CDN 的 base URL",
+        "https://textures.minecraft.net",
+    ),
     "ms_client_id": GsStrConfig(
         "Azure 客户端(应用程序) ID",
         "用于登录命令调用 Microsoft 验证，需要申请应用白名单 (详见 https://aka.ms/AppRegInfo)，普通用户保持默认即可",

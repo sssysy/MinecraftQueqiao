@@ -5,7 +5,7 @@ from typing import Optional
 from PIL import Image, ImageDraw, ImageFont
 from gsuid_core.logger import logger
 
-from ..helpers.downloader import fetch_player_avatar
+from ..helpers.player_skin import fetch_player_avatar
 
 RENDER_DIR = Path(__file__).parent
 FONT_PATH = RENDER_DIR.parent / "fonts" / "mc-unicode-font.otf"

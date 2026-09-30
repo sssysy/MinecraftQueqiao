@@ -13,12 +13,12 @@ from gsuid_core.models import Event
 from ..mcqq_config import mcqq_config
 from ..mcqq_database import MCQQUserBind
 from ..utils.helpers.arg_parse import decode_arg, split_cmd_args
-from ..utils.helpers.downloader import download_image, fetch_player_avatar
+from ..utils.helpers.player_skin import fetch_player_avatar, fetch_skin_texture
 from ..utils.helpers.user_select import extract_at_user_ids
 
 AVATAR_SIZE = 256
 
-# 正面大脸：mc-heads avatar（仅头部正面）
+# 正面大脸：官方皮肤裁切（仅头部正面）
 STYLE_FACE = "正面大脸"
 
 
@@ -93,8 +93,7 @@ async def fetch_avatar_png(player_name: str) -> Tuple[Optional[bytes], Optional[
 
 async def fetch_skin_png(player_name: str) -> Tuple[Optional[bytes], Optional[str]]:
     """拉取原始皮肤贴图 PNG（不重编码，可直接导入游戏）。"""
-    url = f"https://mc-heads.net/skin/{player_name}"
-    content = await download_image(url)
+    content = await fetch_skin_texture(player_name)
     if content is None:
         return None, f"获取皮肤失败：{player_name}\n请确认玩家名是否为正版名，或稍后重试"
 

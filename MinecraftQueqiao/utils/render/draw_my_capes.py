@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Sequence
 from gsuid_core.logger import logger
 
 from .render import fill_template, render_html
-from ..helpers.downloader import fetch_player_avatar
+from ..helpers.player_skin import fetch_player_avatar
 
 if TYPE_CHECKING:
     from ...mc_capes.service import CapeItem
