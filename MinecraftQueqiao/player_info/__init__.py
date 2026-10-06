@@ -74,18 +74,31 @@ async def bind_player_command(bot: Bot, ev: Event) -> None:
 
     existing = await MCQQUserBind.get_by_user_id(target_uid)
     if existing:
-        await MCQQUserBind.update_data_by_data(
-            {"user_id": target_uid},
-            {
-                "player_name": player_name,
-                "bot_id": ev.bot_id,
-            },
+        old_player = existing.player_name
+        had_login = bool(existing.token)
+        deleted = await MCQQUserBind.delete_row(user_id=target_uid)
+        if not deleted:
+            logger.error(
+                f"[MC·游戏绑定] 换绑删除失败：{target_uid} <-> {old_player}"
+            )
+            await bot.send("更新绑定失败，请检查控制台！")
+            return
+        await MCQQUserBind.full_insert_data(
+            user_id=target_uid,
+            player_name=player_name,
+            bot_id=ev.bot_id,
         )
-        logger.info(f"[MC·游戏绑定] 绑定更新：{target_uid} <-> {player_name}")
+        logger.info(
+            f"[MC·游戏绑定] 换绑：{target_uid} {old_player} -> {player_name}"
+            f"（清除登录信息：{had_login}）"
+        )
         if is_for_other:
-            await bot.send(f"更新绑定成功：{target_uid} <-> {player_name}")
+            msg = f"更新绑定成功：{target_uid} <-> {player_name}"
         else:
-            await bot.send("更新绑定成功！")
+            msg = "更新绑定成功！"
+        if had_login:
+            msg += "\n原微软登录信息已清除，如需使用披风等功能请重新发送 mc登录"
+        await bot.send(msg)
     else:
         await MCQQUserBind.full_insert_data(
             user_id=target_uid,
